@@ -1,30 +1,32 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List
 
 import attr
+import numpy as np
 from loguru import logger
 
 
-@attr.dataclass
+@attr.s
 class Byte:
-    value: int = attr.ib(default=0, converter=int)
-    first_nibble: int = attr.ib()
-    second_nibble: int = attr.ib()
-
-    @value.validator
-    def value_validator(self, _, value: int) -> None:
-        if value < 0x00 or value > 0xFF:
-            raise ValueError
+    value: np.uint8 = attr.ib(
+        default=np.uint8(0),
+        validator=attr.validators.instance_of(np.uint8),
+        converter=np.uint8,
+    )
+    first_nibble: np.uint8 = attr.ib(validator=attr.validators.instance_of(np.uint8))
+    second_nibble: np.uint8 = attr.ib(validator=attr.validators.instance_of(np.uint8))
 
     @first_nibble.default
     def first_nibble_default(self) -> int:
-        return self.value >> 4
+        return np.uint8(self.value >> 4)
 
     @second_nibble.default
     def second_nibble_default(self) -> int:
-        return self.value & 0x0F
+        return np.uint8(self.value & 0x0F)
+
+    def __str__(self):
+        return f"{self.value:02x}"
 
     @classmethod
     def from_hex(cls, hex: str) -> Byte:
@@ -33,17 +35,27 @@ class Byte:
         return instance
 
 
+@attr.s
+class Word:
+    first_byte: Byte = attr.ib(validator=attr.validators.instance_of(Byte))
+    second_byte: Byte = attr.ib(validator=attr.validators.instance_of(Byte))
+
+    def __iter__(self):
+        return iter(attr.astuple(self, recurse=False))
+
+    def __str__(self):
+        return f"{self.first_byte.value:02x}{self.second_byte.value:02x}"
+
+
 class Memory:
     def __init__(self):
-        self._memory = [Byte(0)] * 4096
+        self.memory = [Byte(0)] * 4096
 
-    @property
-    def memory(self) -> List[int]:
-        return self._memory
+    def __getitem__(self, slice: slice):
+        return self.memory[slice]
 
-    @memory.setter
-    def memory(self, value: int, position: int) -> None:
-        self.memory[position] = value
+    def __setitem__(self, key, val):
+        self.memory[key] = val
 
     def load(self, program_path: str, initial_position: int) -> None:
         # This function assumes the data is a binary blob
@@ -55,7 +67,7 @@ class Memory:
             logger.warning("Trying to load a program that will not fit in memory")
             logger.warning("Memory size: 4096")
             logger.warning(f"Program's initial position: {initial_position}")
-            logger.warning(f"Program's length: {len(data)}")
+            logger.warning(f"Program's length: {len(data)} bytes")
             raise IndexError
 
         for offset, byte in enumerate(data):
