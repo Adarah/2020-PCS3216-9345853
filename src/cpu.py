@@ -1,3 +1,5 @@
+from typing import Callable, Dict
+
 import attr
 import numpy as np
 from loguru import logger
@@ -9,14 +11,13 @@ from .memory import Byte, Memory, Word
 class CPU:
 
     memory: Memory = attr.ib()
-    PC: int = attr.ib(default=0)
+    _PC: int = attr.ib(default=0, validator=attr.validators.instance_of(int))
     instruction: Word = attr.ib(default=None)
     _AC: np.int16 = attr.ib(
         default=np.int16(0), validator=attr.validators.instance_of(np.int16)
     )
-    halted: bool = attr.ib(default=False)
     trace: bool = attr.ib(default=False)
-    opcode: dict = attr.ib(default=None)
+    opcode: Dict[int, Callable] = attr.ib(default=None)
 
     def __attrs_post_init__(self):
         self.opcode = {
@@ -46,10 +47,25 @@ class CPU:
     def AC(self, value):
         self._AC = np.int16(value)
 
+    @property
+    def PC(self):
+        return self._PC
+
+    @PC.setter
+    def PC(self, value):
+        if (value % 2 != 0) or (value < 0) or (value >= 4096):
+            raise ValueError
+
+        self._PC = value
+
     def fetch(self):
-        if self.PC + 2 > 4096:
+        if self.PC + 2 >= 4096:
             logger.error("Program Counter(+2) is pointing a value larger than 4096")
             raise IndexError
+        if self.trace:
+            print(f"PC: {self.PC}")
+            print(f"AC: {self.AC}")
+            input("Press Enter to continue the program's execution")
         self.instruction = Word(*self.memory[self.PC : self.PC + 2])
         logger.debug(f"Fetching next instruction: {self.instruction}")
         self.PC += 2
@@ -128,16 +144,31 @@ class CPU:
         logger.debug(f"Current PC is now {self.PC}")
 
     def return_from_subroutine(self, arg):
-        self.PC = arg
+        first_byte = self.memory[arg].value
+        second_byte = self.memory[arg + 1].value
+        if first_byte > 0xF:
+            logger.critical(
+                f"""The element in memory position {arg} is larger than 0xF, so
+                PC will overflow. {self.memory[arg]} should have been a value between 0
+                and F"""
+            )
+            raise ValueError
+        self.PC = first_byte * 16 ** 2 + second_byte
+
         logger.debug(f"Returning from subroutine. PC is now {self.PC}")
 
     def halt_machine(self, arg):
         logger.debug("Halting all operations.")
-        self.halted = True
+        input("System halted. Press Enter to resume operations.")
         self.PC = arg
 
     def get_data(self):
-        pass
+        logger.debug("Collecting user inputs")
+        data = input("Input the value to be set in the PC").strip()
+        if data[0] == "/":
+            self.PC = int(data[1:])
+        else:
+            self.PC = int(data, 16)
 
     def put_data(self):
         pass

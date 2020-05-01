@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from src.cpu import CPU
@@ -35,10 +36,10 @@ def test_fetch(cpu):
     assert cpu.PC == 1030
     assert cpu.instruction == Word(Byte(4), Byte(5))
 
-    cpu.PC = 4094
+    cpu.PC = 4092
     cpu.fetch()
-    assert cpu.PC == 4096
-    assert cpu.instruction == Word(Byte(254), Byte(255))
+    assert cpu.PC == 4094
+    assert cpu.instruction == Word(Byte(252), Byte(253))
     with pytest.raises(IndexError):
         cpu.fetch()
 
@@ -72,18 +73,26 @@ def test_decode(cpu, PC, opcode, arg):
 
 @pytest.mark.parametrize("arg", [0x100, 0x300, 0x123, 0xFF3])
 def test_jmp(cpu, arg):
-    cpu.jmp(arg)
-    assert cpu.PC == arg
+    if arg % 2 != 0:
+        with pytest.raises(ValueError):
+            cpu.jmp(arg)
+    else:
+        cpu.jmp(arg)
+        assert cpu.PC == arg
 
 
 @pytest.mark.parametrize(
     "AC, arg, expected_output",
-    [(0, 0x100, 0x100), (1, 0x300, 0), (-3, 0x123, 0), (0, 0xFF3, 0xFF3)],
+    [(0, 0x100, 0x100), (1.5, 0x300, 0), (-3, 0x123, 0), (0, 0xFF3, 0xFF3)],
 )
 def test_jmp_if_zero(cpu, AC, arg, expected_output):
     cpu.AC = AC
-    cpu.jmp_if_zero(arg)
-    assert cpu.PC == expected_output
+    if arg % 2 != 0 and AC == 0:
+        with pytest.raises(ValueError):
+            cpu.jmp_if_zero(arg)
+    else:
+        cpu.jmp_if_zero(arg)
+        assert cpu.PC == expected_output
 
 
 @pytest.mark.parametrize(
@@ -92,8 +101,12 @@ def test_jmp_if_zero(cpu, AC, arg, expected_output):
 )
 def test_jmp_if_negative(cpu, AC, arg, expected_output):
     cpu.AC = AC
-    cpu.jmp_if_negative(arg)
-    assert cpu.PC == expected_output
+    if arg % 2 != 0 and AC < 0:
+        with pytest.raises(ValueError):
+            cpu.jmp_if_negative(arg)
+    else:
+        cpu.jmp_if_negative(arg)
+        assert cpu.PC == expected_output
 
 
 @pytest.mark.parametrize("arg", [123, 0, -44, 67])
@@ -107,6 +120,7 @@ def test_add(cpu, AC, arg):
     cpu.AC = AC
     cpu.add(arg)
     assert cpu.AC == AC + (arg % 256)
+    assert type(cpu.AC) is np.int16
 
 
 @pytest.mark.parametrize("AC, arg", [(10, 0x334), (-33, 0x35), (3, 0x550), (0, 0xFF0)])
@@ -114,6 +128,7 @@ def test_subtract(cpu, AC, arg):
     cpu.AC = AC
     cpu.subtract(arg)
     assert cpu.AC == AC - (arg % 256)
+    assert type(cpu.AC) is np.int16
 
 
 @pytest.mark.parametrize("AC, arg", [(10, 0x334), (-33, 0x35), (3, 0x550), (0, 0xFF0)])
@@ -121,6 +136,7 @@ def test_multiply(cpu, AC, arg):
     cpu.AC = AC
     cpu.multiply(arg)
     assert cpu.AC == AC * (arg % 256)
+    assert type(cpu.AC) is np.int16
 
 
 @pytest.mark.parametrize("AC, arg", [(10, 256), (-33, 0x35), (0.3, 0x550), (0, 0xFF0)])
@@ -132,12 +148,14 @@ def test_divide(cpu, AC, arg):
     else:
         cpu.divide(arg)
         assert cpu.AC == int(AC / (arg % 256))
+        assert type(cpu.AC) is np.int16
 
 
 @pytest.mark.parametrize("arg", [0x552, 0xF4A, 0x345, 0xBB3])
 def test_load_from_memory(cpu, arg):
     cpu.load_from_memory(arg)
     assert cpu.AC == cpu.memory[arg].value
+    assert type(cpu.AC) is np.int16
 
 
 @pytest.mark.parametrize("AC, arg", [(10, 0x334), (0, 0x35), (0xFA, 0x550), (0, 0xFF0)])
@@ -148,30 +166,55 @@ def test_move_to_memory(cpu, AC, arg):
 
 
 @pytest.mark.parametrize(
-    "PC, arg", [(0x123, 0x552), (0xF3A, 0xF4A), (0x00, 0x345), (0x9A, 0xBC3)]
+    "PC, arg", [(0x124, 0x552), (0xF3A, 0xF4A), (0x00, 0x345), (0x9A, 0xBC3)]
 )
 def test_subroutine_call(cpu, PC, arg):
     cpu.PC = PC
-    cpu.subroutine_call(arg)
-    first_nibble = format(PC, "03x")[0]
-    second_byte = format(PC, "03x")[1:]
-    assert cpu.PC == arg + 2
-    assert cpu.memory[arg] == Byte(int(first_nibble, base=16))
-    assert cpu.memory[arg + 1] == Byte(int(second_byte, base=16))
+    if arg % 2 != 0:
+        with pytest.raises(ValueError):
+            cpu.subroutine_call(arg)
+    else:
+        cpu.subroutine_call(arg)
+        first_nibble = format(PC, "03x")[0]
+        second_byte = format(PC, "03x")[1:]
+        assert cpu.PC == arg + 2
+        assert cpu.memory[arg] == Byte(int(first_nibble, base=16))
+        assert cpu.memory[arg + 1] == Byte(int(second_byte, base=16))
 
 
-@pytest.mark.parametrize("arg", [0x123, 0x552, 0xF4A, 0x345, 0xBC3])
-def test_return_from_subroutine(cpu, arg):
+@pytest.mark.parametrize(
+    "arg, expected_result", [(257, 0x102), (271, 3856), (1801, 0x90A)]
+)
+def test_return_from_subroutine(cpu, arg, expected_result):
     cpu.return_from_subroutine(arg)
-    assert cpu.PC == arg
+    assert cpu.PC == expected_result
 
 
 @pytest.mark.parametrize("arg", [0x123, 0x552, 0xF4A, 0x345, 0xBC3])
-def test_halt_machine(cpu, arg):
-    cpu.halt_machine(arg)
-    assert cpu.halted
-    assert cpu.PC == arg
+def test_halt_machine(mocker, cpu, arg):
+    mocker.patch("builtins.input", return_value="blabla")
+    if arg % 2 != 0:
+        with pytest.raises(ValueError):
+            cpu.halt_machine(arg)
+    else:
+        cpu.halt_machine(arg)
+        input.assert_called_once()
+        assert cpu.PC == arg
 
 
-def test_get_data(cpu):
-    pass
+@pytest.mark.parametrize(
+    "user_inputs, expected_output", [("1234", 0x1234), ("/224", 224), ("AF00", 0xAF00)]
+)
+def test_get_data(mocker, cpu, user_inputs, expected_output):
+    mocker.patch("builtins.input", return_value=user_inputs)
+    cpu.get_data()
+    assert cpu.PC == expected_output
+
+
+@pytest.mark.parametrize(
+    "user_inputs", ["11", "-10", "-A3", "i love pizza", "新しいウイルスの病気", "34343434"]
+)
+def test_get_data_errors(mocker, cpu, user_inputs):
+    mocker.patch("builtins.input", return_value=user_inputs)
+    with pytest.raises(ValueError):
+        cpu.get_data()
