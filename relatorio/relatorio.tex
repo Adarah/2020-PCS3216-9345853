@@ -1,0 +1,105 @@
+% Created 2020-05-02 sáb 19:34
+% Intended LaTeX compiler: pdflatex
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{grffile}
+\usepackage{longtable}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage{amssymb}
+\usepackage{capt-of}
+\usepackage{hyperref}
+\author{Lucas Yuji Harada}
+\date{\today}
+\title{Trabalho final de Sistemas de Programação}
+\hypersetup{
+ pdfauthor={Lucas Yuji Harada},
+ pdftitle={Trabalho final de Sistemas de Programação},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={Emacs 28.0.50 (Org mode 9.4)}, 
+ pdflang={English}}
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+
+\section{Objetivo}
+\label{sec:orge6ae37d}
+Para a primeira etapa do projeto, o objetivo é desenvolver três peças essencials a qualquer computador:
+\begin{itemize}
+\item Loader
+\item CPU (Von Neumann Machine)
+\item Assembler
+\end{itemize}
+
+\section{Desenvolvimento}
+\label{sec:org04bd6b2}
+\subsection{CPU}
+\label{sec:orgfc890f6}
+Baseado em princípios de test-driven-development (TDD), eu decidi primeiro criar
+os testes de cada função a ser executada pela CPU (fetch, decode, add, load,
+etc). Como o enunciado não especificava, fiz algumas considerações sobre o tamanho de cada um dos components:
+\begin{itemize}
+\item memória: 12 bits (4096 endereços)
+\item contador de instruções (PC): 16 bits
+\item acumulador: 16 bits
+\end{itemize}
+O motivo para a escolha da memória com 12 bits é devido ao tamanho do operando.
+Como cada instrução tem comprimento de 16 bits, sendo os 4 primeiros usados para
+definir o opcode, foi natural escolher 12 para endereças a memória. A mesma
+lógica se aplica ao acumulador; como existem instruções que podem carregar
+valores de até 12 bits nele (LV/load value por exemplo), usei 16 bits. Tive que
+divergir um pouco da implementação usada nos slides da aula 9, mais
+especificamente na instrução MV/move to memory, pois ela originalmente apenas
+poderia guardar 8 bits. Para guardar os 16 bits, decidi então alterar ela para
+que o endereço indicado pelo operando guarde o byte mais significativo do
+acumulador, e o endereço seguinte guarde o menos significativo.
+\subsection{Loader}
+\label{sec:org34ce5fd}
+Comparativamente aos outros componentes, o loader é bem simples por se tratar de um loader absoluto. Caso tivessémos que implementar um linker/relocador, certamente seria muito mais complicado. No momento, estou usando apenas uma função que lê valores binários e guarda dados do tipo Byte na memória virtual.
+\subsection{Assembler}
+\label{sec:org0508c30}
+Assemblers são programas que convertem mnemônicos assembly (ASM) para código de máquina. Podem ser de um ou dois passos. Assemblers de dois passos primeiro precisam gerar uma tabela de símbolos para depois conseguir traduzir à código de máquina, enquanto que assembler de um passo fazem o processo de coletar referências ainda não resolvidas, símbolos, e a montagem tudo ao mesmo tempo.
+
+\section{Uso}
+\label{sec:org1871881}
+Requisitos mínimos:
+\begin{itemize}
+\item git
+\item python 3.8+
+\end{itemize}
+\subsection{Instalação}
+\label{sec:org49302b5}
+\subsubsection{{\bfseries\sffamily TODO} Double check the instalation procedure, maybe add a windows step-by-step as well? or pyinstaller}
+\label{sec:orgccabc74}
+
+\begin{enumerate}
+\item Dentro de um terminal emulator, usar o comando:
+
+\texttt{git clone https://github.com/Adarah/2020-PCS3216-9345853.git}
+\begin{itemize}
+\item Caso não tenha o git instalado, pode baixar o código fonte manualmente do site da disciplina:
+\url{https://sites.google.com/view/2020-pcs3216-9345853}
+\end{itemize}
+\item Entrar na pasta que foi baixada: \texttt{cd 2020-PCS3216-9345853}
+\item Executar \texttt{pip install .}
+\end{enumerate}
+\subsection{Testes}
+\label{sec:org7aa3bbd}
+Usando a biblioteca pytest e hypothesis, cada um das minhas funções recebem ao
+menos 200 inputs aleatórios, o que ajuda a garantir que o código funciona como
+esperado. Para iniciar uma sessão de testes, basta executar o comando \texttt{pytest} na raiz do diretório onde o código foi baixado.
+\subsection{Uso normal}
+\label{sec:org14f6057}
+\subsubsection{{\bfseries\sffamily TODO} fix this part}
+\label{sec:orgad55777}
+Para uso convencional, basta executar o comando
+\texttt{python3 src/vm.py}
+\end{document}

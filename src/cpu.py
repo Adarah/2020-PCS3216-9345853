@@ -11,13 +11,15 @@ from .memory import Byte, Memory, Word
 class CPU:
 
     memory: Memory = attr.ib()
-    _PC: int = attr.ib(default=0, validator=attr.validators.instance_of(int))
-    instruction: Word = attr.ib(default=None)
-    _AC: np.int16 = attr.ib(
-        default=np.int16(0), validator=attr.validators.instance_of(np.int16)
-    )
     trace: bool = attr.ib(default=False)
-    opcode: Dict[int, Callable] = attr.ib(default=None)
+    _PC: int = attr.ib(
+        default=0, validator=attr.validators.instance_of(int), init=False
+    )
+    instruction: Word = attr.ib(default=None, init=False)
+    _AC: np.int16 = attr.ib(
+        default=np.int16(0), validator=attr.validators.instance_of(np.int16), init=False
+    )
+    opcode: Dict[int, Callable] = attr.ib(default=None, init=False)
 
     def __attrs_post_init__(self):
         self.opcode = {
@@ -45,7 +47,7 @@ class CPU:
 
     @AC.setter
     def AC(self, value):
-        self._AC = np.int16(value)
+        self._AC = CPU.sign_extend(value)
 
     @property
     def PC(self):
@@ -53,19 +55,21 @@ class CPU:
 
     @PC.setter
     def PC(self, value):
-        if (value % 2 != 0) or (value < 0) or (value >= 4096):
+        if (value < 0) or (value > 4096):
+            raise IndexError
+        if (value % 2 != 0):
             raise ValueError
 
         self._PC = value
 
     def fetch(self):
-        if self.PC + 2 >= 4096:
-            logger.error("Program Counter(+2) is pointing a value larger than 4096")
-            raise IndexError
         if self.trace:
             print(f"PC: {self.PC}")
             print(f"AC: {self.AC}")
-            input("Press Enter to continue the program's execution")
+            print("Trace Mode ON")
+            command = input("Input TR to turn it off, or anything else to proceed: ")
+            if command.strip() == "TR":
+                self.trace = False
         self.instruction = Word(*self.memory[self.PC : self.PC + 2])
         logger.debug(f"Fetching next instruction: {self.instruction}")
         self.PC += 2
@@ -73,12 +77,12 @@ class CPU:
     def decode(self):
         function = self.opcode[self.instruction.first_byte.first_nibble]
         arg = (
-            self.instruction.first_byte.second_nibble * 16 ** 2
+            self.instruction.first_byte.second_nibble * 0x100
             + self.instruction.second_byte.value
         )
         logger.debug(f"Decoding instruction: {self.instruction}")
-        logger.debug(f"Operation: {function}")
-        logger.debug(f"Argument: {arg}")
+        logger.debug(f"Operation: {function.__name__}")
+        logger.debug(f"Argument: {arg} == /{arg:03X}")
         return function, arg
 
     def jmp(self, arg):
@@ -104,26 +108,34 @@ class CPU:
         self.AC = arg
 
     def add(self, arg):
-        self.AC += self.memory[arg].value
-        logger.debug(f"Adding {arg} to AC")
+        self.AC += CPU.sign_extend(self.memory[arg].value)
+        logger.debug(
+            f"Adding value in memory position {arg} == /{self.memory[arg].value:03X} to AC"
+        )
         logger.debug(f"AC is now {self.AC}")
 
     def subtract(self, arg):
-        self.AC -= self.memory[arg].value
-        logger.debug(f"Subtracting {arg} from AC")
+        self.AC -= CPU.sign_extend(self.memory[arg].value)
+        logger.debug(
+            f"Subtracting value in memory position {arg} == /{self.memory[arg].value:03X} from AC"
+        )
         logger.debug(f"AC is now {self.AC}")
 
     def multiply(self, arg):
-        self.AC *= self.memory[arg].value
-        logger.debug(f"Multiplying AC by {arg}")
+        self.AC *= CPU.sign_extend(self.memory[arg].value)
+        logger.debug(
+            f"Multiplying AC by the value in memory position {arg} == /{self.memory[arg].value:03X}"
+        )
         logger.debug(f"AC is now {self.AC}")
 
     def divide(self, arg):
         if self.memory[arg].value == 0:
             raise ZeroDivisionError
 
-        self.AC /= self.memory[arg].value
-        logger.debug(f"Dividing AC by {arg}")
+        self.AC //= CPU.sign_extend(self.memory[arg].value)
+        logger.debug(
+            f"Dividing AC by the value in memory position {arg} == /{self.memory[arg].value:03X}"
+        )
         logger.debug(f"AC is now {self.AC}")
 
     def load_from_memory(self, arg):
@@ -132,9 +144,14 @@ class CPU:
         logger.debug(f"AC is now {self.AC}")
 
     def move_to_memory(self, arg):
-        self.memory[arg] = Byte(self.AC)
-        logger.debug(f"Moving AC to memory position {arg}")
-        logger.debug(f"Address {arg} now stores {self.AC}")
+        logger.debug(f"Moving {self.AC:04X} MSB to memory position {arg}")
+        logger.debug(f"Moving {self.AC:04X} LSB to memory position {arg + 1}")
+        ac_hex = int(self.AC).to_bytes(2, 'big', signed=True)
+        msb = ac_hex[0]
+        lsb = ac_hex[1]
+        print(format(self.AC, '04X'))
+        self.memory[arg] = msb
+        self.memory[arg + 1] = lsb
 
     def subroutine_call(self, arg):
         self.memory[arg] = Byte((self.PC & 0xF00) >> 8)
@@ -152,8 +169,8 @@ class CPU:
                 PC will overflow. {self.memory[arg]} should have been a value between 0
                 and F"""
             )
-            raise ValueError
-        self.PC = first_byte * 16 ** 2 + second_byte
+            raise OverflowError
+        self.PC = first_byte * 0x100 + second_byte
 
         logger.debug(f"Returning from subroutine. PC is now {self.PC}")
 
@@ -162,24 +179,50 @@ class CPU:
         input("System halted. Press Enter to resume operations.")
         self.PC = arg
 
-    def get_data(self):
+    def get_data(self, _=None):
         logger.debug("Collecting user inputs")
-        data = input("Input the value to be set in the PC").strip()
-        if data[0] == "/":
-            self.PC = int(data[1:])
-        else:
-            self.PC = int(data, 16)
+        while self.process_user_input():
+            continue
 
-    def put_data(self):
-        pass
+    def process_user_input(self):
+        """Had to create this function for testing purposes. Tests were in an
+        infinite loop after mocking the user input to something invalid"""
+        user_input = input("Input the value to be set in the PC").strip()
+        try:
+            if user_input[0] == "/":  # numbers with a leading / are treated as hex
+                value = int(user_input[1:], 16)
+            else:
+                value = int(user_input)
+
+            self.PC = value
+
+        except (ValueError, OverflowError):
+            logger.debug(f"Invalid input attempted: {user_input}")
+            print("Invalid input. Expected value in the range [0, 4096[")
+            return 1
+
+        return 0
+
+    def put_data(self, _=None):
+        """Poorly named instruction. It "puts" the data in stdout, i.e. prints it """
+        print(self.AC)
 
     def os_call(self):
         raise NotImplementedError
 
+    @staticmethod
+    def sign_extend(val: int) -> np.int16:
+        msb = (val & 1 << 11) >> 11
+        if msb == 1:
+            val |= 0xF000
+        return np.int16(val)
+
 
 if __name__ == "__main__":
     mem = Memory()
-    cpu = CPU(mem)
+    cpu = CPU(mem, False)
     cpu.load_value(0x123)
     cpu.fetch()
     cpu.load_value(0x445)
+    cpu.fetch()
+    cpu.put_data(123)
