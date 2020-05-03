@@ -10,16 +10,16 @@ from .memory import Byte, Memory, Word
 @attr.s
 class CPU:
 
-    memory: Memory = attr.ib()
+    memory: Memory = attr.ib(repr=False)
     trace: bool = attr.ib(default=False)
     _PC: int = attr.ib(
         default=0, validator=attr.validators.instance_of(int), init=False
     )
     instruction: Word = attr.ib(default=None, init=False)
-    _AC: np.int16 = attr.ib(
-        default=np.int16(0), validator=attr.validators.instance_of(np.int16), init=False
+    _AC: Byte = attr.ib(
+        default=Byte(0), validator=attr.validators.instance_of(Byte), init=False
     )
-    opcode: Dict[int, Callable] = attr.ib(default=None, init=False)
+    opcode: Dict[int, Callable] = attr.ib(default=None, init=False, repr=False)
 
     def __attrs_post_init__(self):
         self.opcode = {
@@ -47,7 +47,10 @@ class CPU:
 
     @AC.setter
     def AC(self, value):
-        self._AC = CPU.sign_extend(value)
+        if type(value) is not Byte:
+            self._AC = Byte(value)
+        else:
+            self._AC = value
 
     @property
     def PC(self):
@@ -57,7 +60,7 @@ class CPU:
     def PC(self, value):
         if (value < 0) or (value > 4096):
             raise IndexError
-        if (value % 2 != 0):
+        if value % 2 != 0:
             raise ValueError
 
         self._PC = value
@@ -108,50 +111,43 @@ class CPU:
         self.AC = arg
 
     def add(self, arg):
-        self.AC += CPU.sign_extend(self.memory[arg].value)
+        self.AC += self.memory[arg]
         logger.debug(
-            f"Adding value in memory position {arg} == /{self.memory[arg].value:03X} to AC"
+            f"Adding value in memory position {arg} == /{self.memory[arg]:03X} to AC"
         )
         logger.debug(f"AC is now {self.AC}")
 
     def subtract(self, arg):
-        self.AC -= CPU.sign_extend(self.memory[arg].value)
+        self.AC -= self.memory[arg]
         logger.debug(
-            f"Subtracting value in memory position {arg} == /{self.memory[arg].value:03X} from AC"
+            f"Subtracting value in memory position {arg} == /{self.memory[arg]:03X} from AC"
         )
         logger.debug(f"AC is now {self.AC}")
 
     def multiply(self, arg):
-        self.AC *= CPU.sign_extend(self.memory[arg].value)
+        self.AC *= self.memory[arg]
         logger.debug(
-            f"Multiplying AC by the value in memory position {arg} == /{self.memory[arg].value:03X}"
+            f"Multiplying AC by the value in memory position {arg} == /{self.memory[arg]:03X}"
         )
         logger.debug(f"AC is now {self.AC}")
 
     def divide(self, arg):
-        if self.memory[arg].value == 0:
+        if self.memory[arg] == 0:
             raise ZeroDivisionError
 
-        self.AC //= CPU.sign_extend(self.memory[arg].value)
+        self.AC //= self.memory[arg]
         logger.debug(
-            f"Dividing AC by the value in memory position {arg} == /{self.memory[arg].value:03X}"
+            f"Dividing AC by the value in memory position {arg} == /{self.memory[arg]:03X}"
         )
         logger.debug(f"AC is now {self.AC}")
 
     def load_from_memory(self, arg):
-        self.AC = self.memory[arg].value
-        logger.debug(f"Setting AC to the value found in memory position {arg}")
-        logger.debug(f"AC is now {self.AC}")
+        logger.debug(f"Settings AC to the value found in memory position {arg} == /{arg:02X}")
+        self.AC = self.memory[arg]
 
     def move_to_memory(self, arg):
-        logger.debug(f"Moving {self.AC:04X} MSB to memory position {arg}")
-        logger.debug(f"Moving {self.AC:04X} LSB to memory position {arg + 1}")
-        ac_hex = int(self.AC).to_bytes(2, 'big', signed=True)
-        msb = ac_hex[0]
-        lsb = ac_hex[1]
-        print(format(self.AC, '04X'))
-        self.memory[arg] = msb
-        self.memory[arg + 1] = lsb
+        logger.debug(f"Moving AC == {self.AC:04X} to memory position {arg}")
+        self.memory[arg] = self.AC
 
     def subroutine_call(self, arg):
         self.memory[arg] = Byte((self.PC & 0xF00) >> 8)
@@ -161,16 +157,16 @@ class CPU:
         logger.debug(f"Current PC is now {self.PC}")
 
     def return_from_subroutine(self, arg):
-        first_byte = self.memory[arg].value
-        second_byte = self.memory[arg + 1].value
-        if first_byte > 0xF:
+        first_byte = format(self.memory[arg], 'x')
+        second_byte = format(self.memory[arg + 1], 'x')
+        if self.memory[arg] > 0xF:
             logger.critical(
                 f"""The element in memory position {arg} is larger than 0xF, so
                 PC will overflow. {self.memory[arg]} should have been a value between 0
                 and F"""
             )
             raise OverflowError
-        self.PC = first_byte * 0x100 + second_byte
+        self.PC = int(first_byte + second_byte, 16)
 
         logger.debug(f"Returning from subroutine. PC is now {self.PC}")
 
@@ -196,9 +192,9 @@ class CPU:
 
             self.PC = value
 
-        except (ValueError, OverflowError):
+        except (ValueError, OverflowError, IndexError):
             logger.debug(f"Invalid input attempted: {user_input}")
-            print("Invalid input. Expected value in the range [0, 4096[")
+            print("Invalid input. Expected even integer in range [0, 255]")
             return 1
 
         return 0
@@ -209,13 +205,6 @@ class CPU:
 
     def os_call(self):
         raise NotImplementedError
-
-    @staticmethod
-    def sign_extend(val: int) -> np.int16:
-        msb = (val & 1 << 11) >> 11
-        if msb == 1:
-            val |= 0xF000
-        return np.int16(val)
 
 
 if __name__ == "__main__":

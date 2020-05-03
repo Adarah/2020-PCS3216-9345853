@@ -23,7 +23,9 @@ divergir um pouco da implementação usada nos slides da aula 9, mais
 especificamente na instrução MV/move to memory, pois ela originalmente apenas
 poderia guardar 8 bits. Para guardar os 16 bits, decidi então alterar ela para
 que o endereço indicado pelo operando guarde o byte mais significativo do
-acumulador, e o endereço seguinte guarde o menos significativo.
+acumulador, e o endereço seguinte guarde o menos significativo. Para manter
+compatibilidade com a função LM/load from memory, também a alterei para que ela
+puxe 16 bits.
 ** Loader
 Comparativamente aos outros componentes, o loader é bem simples por se tratar de um loader absoluto. Caso tivessémos que implementar um linker/relocador, certamente seria muito mais complicado. No momento, estou usando apenas uma função que lê valores binários e guarda dados do tipo Byte na memória virtual.
 ** Assembler
