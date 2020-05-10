@@ -125,10 +125,14 @@ class Assembler:
                 if not line:
                     continue
                 res = list(step_one_parser.parseString(line))
+                if self.file_end >= 4096:
+                    raise IndexError(f"""The program will not fit in memory
+                    Initial address: {self.file_start}
+                    Program length: {self.file_len}
+                    {self.file_start + self.file_len} >= 4096""")
                 self.tokens.append(res)
 
     def step_two(self):
-        print(self)
         # print(self.tokens)
         partial_result = []  # opcodes with symbols substituted by their addresses
         for token in self.tokens:
@@ -163,7 +167,6 @@ class Assembler:
         result = bytearray(result)
 
         path = Path(__file__).resolve().parent.joinpath("data/program.bin")
-        print(result)
         with open(path, "wb") as f:
             f.write(result)
 

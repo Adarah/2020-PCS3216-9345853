@@ -1,4 +1,4 @@
-@ /E00
+@ /F00
 LD FIRST
 PD 0
 LD SECOND

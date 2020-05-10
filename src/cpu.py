@@ -193,6 +193,7 @@ class CPU:
         output_path = Path(__file__).parent.resolve().joinpath("data/output.txt")
         with open(output_path, "a") as f:
             f.write(str(self.AC.unsigned))
+            f.write("\n")
 
     def os_call(self, arg):
         if arg == 0:
