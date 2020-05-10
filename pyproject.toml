@@ -4,8 +4,8 @@ version = "0.1.0"
 description = "Projeto de SisProg"
 authors = ["Adarah <lucasyharada@gmail.com>"]
 packages = [
-{ include = "./src"},
-{ include = "./tests/"},
+    { include = "./src"},
+    { include = "./tests/"},
 ]
 
 [tool.poetry.dependencies]
