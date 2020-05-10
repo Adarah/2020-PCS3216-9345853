@@ -1,4 +1,4 @@
-% Created 2020-05-04 seg 12:35
+% Created 2020-05-10 dom 13:42
 % Intended LaTeX compiler: pdflatex
 \documentclass[11pt]{article}
 \usepackage[utf8]{inputenc}
@@ -31,7 +31,7 @@
 
 
 \section{Objetivo}
-\label{sec:orgc514dfc}
+\label{sec:orgef5dbb7}
 Para a primeira etapa do projeto, o objetivo é desenvolver três peças essencials a qualquer computador:
 \begin{itemize}
 \item Loader
@@ -39,47 +39,86 @@ Para a primeira etapa do projeto, o objetivo é desenvolver três peças essenci
 \item Assembler
 \end{itemize}
 \section{Desenvolvimento}
-\label{sec:orgd9a08d0}
+\label{sec:orgaaa6f63}
 \subsection{CPU}
-\label{sec:org1f4ee09}
+\label{sec:orge0d2848}
 Baseado em princípios de test-driven-development (TDD), eu decidi primeiro criar
 os testes de cada função a ser executada pela CPU (fetch, decode, add, load,
 etc). Como o enunciado não especificava, fiz algumas considerações sobre o tamanho de cada um dos components:
 \begin{itemize}
 \item memória: 12 bits (4096 endereços)
-\item contador de instruções (PC): 16 bits
-\item acumulador: 16 bits
+\item contador de instruções (PC): 12 bits
+\item acumulador: 8 bits
 \end{itemize}
-O motivo para a escolha da memória com 12 bits é devido ao tamanho do operando.
-Como cada instrução tem comprimento de 16 bits, sendo os 4 primeiros usados para
-definir o opcode, foi natural escolher 12 para endereças a memória. A mesma
-lógica se aplica ao acumulador; como existem instruções que podem carregar
-valores de até 12 bits nele (LV/load value por exemplo), usei 16 bits. Tive que
-divergir um pouco da implementação usada nos slides da aula 9, mais
-especificamente na instrução MV/move to memory, pois ela originalmente apenas
-poderia guardar 8 bits. Para guardar os 16 bits, decidi então alterar ela para
-que o endereço indicado pelo operando guarde o byte mais significativo do
-acumulador, e o endereço seguinte guarde o menos significativo. Para manter
-compatibilidade com a função LM/load from memory, também a alterei para que ela
-puxe 16 bits.
+O motivo para a escolha da memória com 12 bits é devido ao tamanho do operando. A única operação de OS call implementada até o momento é a de argumento 0, que realiza a saída do programa.
 \subsection{Loader}
-\label{sec:orgc7155b9}
-Comparativamente aos outros componentes, o loader é bem simples por se tratar de um loader absoluto. Caso tivessémos que implementar um linker/relocador, certamente seria muito mais complicado. No momento, estou usando apenas uma função que lê valores binários e guarda dados do tipo Byte na memória virtual.
+\label{sec:org55e498e}
+O loader foi escrito em assembly, e possui 59 bytes. GOAL\textsubscript{ONE} e GOAL\textsubscript{TWO} são as variáveis que guardam o MSB e LSB do endereço do programa a ser carregado. Ao final do procedimento de load, o loader automaticamente move o Program Counter para o endereço inicial do programa carregado.
+\begin{verbatim}
+@   0
+START
+            GD  0
+            MM GOAL_ONE
+            +   NINETY
+            MM  FIRST_BYTE
+            GD  0
+            MM GOAL_TWO
+            MM  SECOND_BYTE
+            GD  0
+            MM  LENGTH
+REPEAT
+            GD  0
+            JP  FIRST_BYTE
+RETURN
+            LD  SECOND_BYTE
+            +   ONE
+            MM  SECOND_BYTE
+            JZ  CARRY
+CHECK_IF_DONE
+            LD  LENGTH
+            -   ONE
+            MM  LENGTH
+            JZ  FINISH
+            JP  REPEAT
+CARRY
+            LD  FIRST_BYTE
+            +   ONE
+            MM  FIRST_BYTE
+            +   ONE
+            JP  CHECK_IF_DONE
+
+FIRST_BYTE   K  00 ;test
+SECOND_BYTE  K  00
+            JP RETURN
+LENGTH       K  00
+ONE          K  01
+NINETY       K  /90
+FINISH
+GOAL_ONE     K 0
+GOAL_TWO     K 0
+#  START
+\end{verbatim}
 \subsection{Assembler}
-\label{sec:org67b4885}
-Assemblers são programas que convertem mnemônicos assembly (ASM) para código de máquina. Podem ser de um ou dois passos. Assemblers de dois passos primeiro precisam gerar uma tabela de símbolos para depois conseguir traduzir à código de máquina, enquanto que assembler de um passo fazem o processo de coletar referências ainda não resolvidas, símbolos, e a montagem tudo ao mesmo tempo.
+\label{sec:orge872498}
+Assemblers são programas que convertem mnemônicos assembly (ASM) para código de
+máquina. Podem ser de um ou dois passos. Assemblers de dois passos primeiro
+precisam gerar uma tabela de símbolos para depois conseguir traduzir à código de
+máquina, enquanto que assembler de um passo fazem o processo de coletar
+referências ainda não resolvidas, símbolos, e a montagem tudo ao mesmo tempo.
+
+Nesse projeto, para a primeira entrega, o assembler não trata de casos em que existem mais de uma psudo instrução de start (@). Outra restrição é que, quando usar diretivas (como START/CARRY no exemplo do loader), é necessário que elas estejam em linhas separadas de comandos.
 
 \section{Uso}
-\label{sec:org7080ac9}
+\label{sec:org482da1e}
 Requisitos mínimos:
 \begin{itemize}
 \item git
 \item python 3.8+
 \end{itemize}
 \subsection{Instalação}
-\label{sec:org8e28e9b}
+\label{sec:orgbcd2479}
 \subsubsection{{\bfseries\sffamily TODO} Double check the instalation procedure, maybe add a windows step-by-step as well? or pyinstaller}
-\label{sec:org74f3a3e}
+\label{sec:org10459c1}
 
 \begin{enumerate}
 \item Dentro de um terminal emulator, usar o comando:
@@ -93,14 +132,16 @@ Requisitos mínimos:
 \item Executar \texttt{pip install .}
 \end{enumerate}
 \subsection{Testes}
-\label{sec:org97d2ad2}
+\label{sec:org866a0ea}
 Usando a biblioteca pytest e hypothesis, cada um das minhas funções recebem ao
 menos 200 inputs aleatórios, o que ajuda a garantir que o código funciona como
-esperado. Para iniciar uma sessão de testes, basta executar o comando \texttt{pytest} na raiz do diretório onde o código foi baixado.
+esperado. Para iniciar uma sessão de testes, basta executar o comando \texttt{pytest}
+na raiz do diretório onde o código foi baixado.
 \subsection{Uso normal}
-\label{sec:orgdce4ea4}
+\label{sec:org4303a29}
 \subsubsection{{\bfseries\sffamily TODO} fix this part}
-\label{sec:org860afa3}
+\label{sec:org65b5d2c}
 Para uso convencional, basta executar o comando
 \texttt{python3 src/vm.py}
+A VM irá procurar o arquivo assembly.txt dentro da pasta ./src/data/ e fará a montagem e também a execução.
 \end{document}
