@@ -1,10 +1,12 @@
+import random
+
 import pytest
-from hypothesis import given, settings, assume
-from hypothesis.strategies import builds, integers, text, one_of, none, characters, just
+from hypothesis import assume, given, settings
+from hypothesis.strategies import binary, builds, integers, one_of, text
+from loguru import logger
 
 from src.cpu import CPU
 from src.memory import Byte, Memory, Word
-from loguru import logger
 
 pytestmark = [pytest.mark.hypothesis]
 
@@ -50,12 +52,8 @@ def test_decode(cpu, msb, lsb):
 
 @given(arg=arg)
 def test_jmp(cpu, arg):
-    if arg % 2 == 0:
-        cpu.jmp(arg)
-        assert cpu.PC == arg
-    else:
-        with pytest.raises(ValueError):
-            cpu.jmp(arg)
+    cpu.jmp(arg)
+    assert cpu.PC == arg
 
 
 @given(arg=even_positions, ac=ac)
@@ -228,39 +226,9 @@ def test_halt_machine(cpu, arg, module_mocker, user_input):
     assert cpu.PC == arg
 
 
-@given(user_input=valid_user_data)
-def test_process_user_input(cpu, module_mocker, user_input):
-    module_mocker.patch("builtins.input", return_value=user_input)
-    assert not cpu.process_user_input()
-    input.assert_called_once()
-    if user_input[0] == "/":
-        assert cpu.PC == int(user_input[1:], 16)
-    else:
-        assert cpu.PC == int(user_input)
-
-
-def bad_data_validator(data):
-    try:
-        if data[0] == "/":
-            number = int(data[1:], 16)
-        else:
-            number = int(data)
-        return (number % 2 != 0)
-
-    except Exception:
-        return True
-
-
-@given(user_input=text().filter(bad_data_validator))
-def test_process_invalid_user_input(cpu, module_mocker, user_input):
-    module_mocker.patch("builtins.input", return_value=user_input)
-    assert cpu.process_user_input()
-    input.assert_called_once()
-
-
-@pytest.mark.parametrize("AC", [0, 1234, -55, -1])
-def test_put_data(capsys, cpu, AC):
-    cpu.AC = AC
-    cpu.put_data()
-    captured = capsys.readouterr()
-    assert captured.out == str(Byte(AC)) + "\n"
+@given(data=binary(min_size=1, max_size=4096))
+def test_get_data(cpu, data):
+    cpu.memory.program_data = data
+    cpu.memory.read_offset = random.randint(0, len(data) - 1)
+    cpu.get_data(0x213)
+    assert cpu.AC == Byte(data[cpu.memory.read_offset - 1])

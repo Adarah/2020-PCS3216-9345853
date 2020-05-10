@@ -1,4 +1,4 @@
-% Created 2020-05-02 sáb 19:34
+% Created 2020-05-04 seg 12:35
 % Intended LaTeX compiler: pdflatex
 \documentclass[11pt]{article}
 \usepackage[utf8]{inputenc}
@@ -31,18 +31,17 @@
 
 
 \section{Objetivo}
-\label{sec:orge6ae37d}
+\label{sec:orgc514dfc}
 Para a primeira etapa do projeto, o objetivo é desenvolver três peças essencials a qualquer computador:
 \begin{itemize}
 \item Loader
 \item CPU (Von Neumann Machine)
 \item Assembler
 \end{itemize}
-
 \section{Desenvolvimento}
-\label{sec:org04bd6b2}
+\label{sec:orgd9a08d0}
 \subsection{CPU}
-\label{sec:orgfc890f6}
+\label{sec:org1f4ee09}
 Baseado em princípios de test-driven-development (TDD), eu decidi primeiro criar
 os testes de cada função a ser executada pela CPU (fetch, decode, add, load,
 etc). Como o enunciado não especificava, fiz algumas considerações sobre o tamanho de cada um dos components:
@@ -60,25 +59,27 @@ divergir um pouco da implementação usada nos slides da aula 9, mais
 especificamente na instrução MV/move to memory, pois ela originalmente apenas
 poderia guardar 8 bits. Para guardar os 16 bits, decidi então alterar ela para
 que o endereço indicado pelo operando guarde o byte mais significativo do
-acumulador, e o endereço seguinte guarde o menos significativo.
+acumulador, e o endereço seguinte guarde o menos significativo. Para manter
+compatibilidade com a função LM/load from memory, também a alterei para que ela
+puxe 16 bits.
 \subsection{Loader}
-\label{sec:org34ce5fd}
+\label{sec:orgc7155b9}
 Comparativamente aos outros componentes, o loader é bem simples por se tratar de um loader absoluto. Caso tivessémos que implementar um linker/relocador, certamente seria muito mais complicado. No momento, estou usando apenas uma função que lê valores binários e guarda dados do tipo Byte na memória virtual.
 \subsection{Assembler}
-\label{sec:org0508c30}
+\label{sec:org67b4885}
 Assemblers são programas que convertem mnemônicos assembly (ASM) para código de máquina. Podem ser de um ou dois passos. Assemblers de dois passos primeiro precisam gerar uma tabela de símbolos para depois conseguir traduzir à código de máquina, enquanto que assembler de um passo fazem o processo de coletar referências ainda não resolvidas, símbolos, e a montagem tudo ao mesmo tempo.
 
 \section{Uso}
-\label{sec:org1871881}
+\label{sec:org7080ac9}
 Requisitos mínimos:
 \begin{itemize}
 \item git
 \item python 3.8+
 \end{itemize}
 \subsection{Instalação}
-\label{sec:org49302b5}
+\label{sec:org8e28e9b}
 \subsubsection{{\bfseries\sffamily TODO} Double check the instalation procedure, maybe add a windows step-by-step as well? or pyinstaller}
-\label{sec:orgccabc74}
+\label{sec:org74f3a3e}
 
 \begin{enumerate}
 \item Dentro de um terminal emulator, usar o comando:
@@ -92,14 +93,14 @@ Requisitos mínimos:
 \item Executar \texttt{pip install .}
 \end{enumerate}
 \subsection{Testes}
-\label{sec:org7aa3bbd}
+\label{sec:org97d2ad2}
 Usando a biblioteca pytest e hypothesis, cada um das minhas funções recebem ao
 menos 200 inputs aleatórios, o que ajuda a garantir que o código funciona como
 esperado. Para iniciar uma sessão de testes, basta executar o comando \texttt{pytest} na raiz do diretório onde o código foi baixado.
 \subsection{Uso normal}
-\label{sec:org14f6057}
+\label{sec:orgdce4ea4}
 \subsubsection{{\bfseries\sffamily TODO} fix this part}
-\label{sec:orgad55777}
+\label{sec:org860afa3}
 Para uso convencional, basta executar o comando
 \texttt{python3 src/vm.py}
 \end{document}

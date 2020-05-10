@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Trabalho final de Sistemas de Programação</title>
+<meta name="author" content="Lucas Yuji Harada"/>
+<style type="text/css">
+.underline { text-decoration: underline; }
+</style>
+<link rel="stylesheet" href="https://revealjs.com/css/reveal.css"/>
+
+<link rel="stylesheet" href="https://revealjs.com/css/theme/black.css" id="theme"/>
+
+<!-- If the query includes 'print-pdf', include the PDF print sheet -->
+<script>
+    if( window.location.search.match( /print-pdf/gi ) ) {
+        var link = document.createElement( 'link' );
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = 'https://revealjs.com/css/print/pdf.css';
+        document.getElementsByTagName( 'head' )[0].appendChild( link );
+    }
+</script>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+<section id="sec-title-slide">
+<h1 class="title">Trabalho final de Sistemas de Programação</h1><h2 class="author">Lucas Yuji Harada</h2><p class="date">Created: 2020-05-04 seg 12:36</p>
+</section>
+<section id="table-of-contents-section">
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#/slide-1">1. Objetivo</a></li>
+<li><a href="#/slide-2">2. Desenvolvimento</a>
+<ul>
+<li><a href="#/slide-2-1">2.1. CPU</a></li>
+<li><a href="#/slide-2-2">2.2. Loader</a></li>
+<li><a href="#/slide-2-3">2.3. Assembler</a></li>
+</ul>
+</li>
+<li><a href="#/slide-3">3. Uso</a>
+<ul>
+<li><a href="#/slide-3-1">3.1. Instalação</a>
+<ul>
+<li><a href="#/slide-3-1-1">3.1.1. <span class="todo TODO">TODO</span> Double check the instalation procedure, maybe add a windows step-by-step as well? or pyinstaller</a></li>
+</ul>
+</li>
+<li><a href="#/slide-3-2">3.2. Testes</a></li>
+<li><a href="#/slide-3-3">3.3. Uso normal</a>
+<ul>
+<li><a href="#/slide-3-3-1">3.3.1. <span class="todo TODO">TODO</span> fix this part</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+</section>
+
+<section>
+<section id="slide-1">
+<h2 id="1"><span class="section-number-2">1</span> Objetivo</h2>
+<p>
+Para a primeira etapa do projeto, o objetivo é desenvolver três peças essencials a qualquer computador:
+</p>
+<ul>
+<li>Loader</li>
+<li>CPU (Von Neumann Machine)</li>
+<li>Assembler</li>
+
+</ul>
+</section>
+</section>
+<section>
+<section id="slide-2">
+<h2 id="2"><span class="section-number-2">2</span> Desenvolvimento</h2>
+<div class="outline-text-2" id="text-2">
+</div>
+</section>
+<section id="slide-2-1">
+<h3 id="2-1"><span class="section-number-3">2.1</span> CPU</h3>
+<p>
+Baseado em princípios de test-driven-development (TDD), eu decidi primeiro criar
+os testes de cada função a ser executada pela CPU (fetch, decode, add, load,
+etc). Como o enunciado não especificava, fiz algumas considerações sobre o tamanho de cada um dos components:
+</p>
+<ul>
+<li>memória: 12 bits (4096 endereços)</li>
+<li>contador de instruções (PC): 16 bits</li>
+<li>acumulador: 16 bits</li>
+
+</ul>
+<p>
+O motivo para a escolha da memória com 12 bits é devido ao tamanho do operando.
+Como cada instrução tem comprimento de 16 bits, sendo os 4 primeiros usados para
+definir o opcode, foi natural escolher 12 para endereças a memória. A mesma
+lógica se aplica ao acumulador; como existem instruções que podem carregar
+valores de até 12 bits nele (LV/load value por exemplo), usei 16 bits. Tive que
+divergir um pouco da implementação usada nos slides da aula 9, mais
+especificamente na instrução MV/move to memory, pois ela originalmente apenas
+poderia guardar 8 bits. Para guardar os 16 bits, decidi então alterar ela para
+que o endereço indicado pelo operando guarde o byte mais significativo do
+acumulador, e o endereço seguinte guarde o menos significativo. Para manter
+compatibilidade com a função LM/load from memory, também a alterei para que ela
+puxe 16 bits.
+</p>
+</section>
+<section id="slide-2-2">
+<h3 id="2-2"><span class="section-number-3">2.2</span> Loader</h3>
+<p>
+Comparativamente aos outros componentes, o loader é bem simples por se tratar de um loader absoluto. Caso tivessémos que implementar um linker/relocador, certamente seria muito mais complicado. No momento, estou usando apenas uma função que lê valores binários e guarda dados do tipo Byte na memória virtual.
+</p>
+</section>
+<section id="slide-2-3">
+<h3 id="2-3"><span class="section-number-3">2.3</span> Assembler</h3>
+<p>
+Assemblers são programas que convertem mnemônicos assembly (ASM) para código de máquina. Podem ser de um ou dois passos. Assemblers de dois passos primeiro precisam gerar uma tabela de símbolos para depois conseguir traduzir à código de máquina, enquanto que assembler de um passo fazem o processo de coletar referências ainda não resolvidas, símbolos, e a montagem tudo ao mesmo tempo.
+</p>
+
+</section>
+</section>
+<section>
+<section id="slide-3">
+<h2 id="3"><span class="section-number-2">3</span> Uso</h2>
+<p>
+Requisitos mínimos:
+</p>
+<ul>
+<li>git</li>
+<li>python 3.8+</li>
+
+</ul>
+</section>
+<section id="slide-3-1">
+<h3 id="3-1"><span class="section-number-3">3.1</span> Instalação</h3>
+<div class="outline-text-3" id="text-3-1">
+</div>
+</section>
+<section id="slide-3-1-1">
+<h4 id="3-1-1"><span class="section-number-4">3.1.1</span> <span class="todo TODO">TODO</span> Double check the instalation procedure, maybe add a windows step-by-step as well? or pyinstaller</h4>
+<ol>
+<li><p>
+Dentro de um terminal emulator, usar o comando:
+</p>
+
+<p>
+<code>git clone https://github.com/Adarah/2020-PCS3216-9345853.git</code>
+</p>
+<ul>
+<li>Caso não tenha o git instalado, pode baixar o código fonte manualmente do site da disciplina:
+<a href="https://sites.google.com/view/2020-pcs3216-9345853">https://sites.google.com/view/2020-pcs3216-9345853</a></li>
+
+</ul></li>
+<li>Entrar na pasta que foi baixada: <code>cd 2020-PCS3216-9345853</code></li>
+<li>Executar <code>pip install .</code></li>
+
+</ol>
+</section>
+<section id="slide-3-2">
+<h3 id="3-2"><span class="section-number-3">3.2</span> Testes</h3>
+<p>
+Usando a biblioteca pytest e hypothesis, cada um das minhas funções recebem ao
+menos 200 inputs aleatórios, o que ajuda a garantir que o código funciona como
+esperado. Para iniciar uma sessão de testes, basta executar o comando <code>pytest</code> na raiz do diretório onde o código foi baixado.
+</p>
+</section>
+<section id="slide-3-3">
+<h3 id="3-3"><span class="section-number-3">3.3</span> Uso normal</h3>
+<div class="outline-text-3" id="text-3-3">
+</div>
+</section>
+<section id="slide-3-3-1">
+<h4 id="3-3-1"><span class="section-number-4">3.3.1</span> <span class="todo TODO">TODO</span> fix this part</h4>
+<p>
+Para uso convencional, basta executar o comando
+<code>python3 src/vm.py</code>
+</p>
+</section>
+</section>
+</div>
+</div>
+<script src="https://revealjs.com/lib/js/head.min.js"></script>
+<script src="https://revealjs.com/js/reveal.js"></script>
+<script>
+// Full list of configuration options available here:
+// https://github.com/hakimel/reveal.js#configuration
+Reveal.initialize({
+
+controls: true,
+progress: true,
+history: false,
+center: true,
+slideNumber: 'c',
+rollingLinks: false,
+keyboard: true,
+mouseWheel: false,
+fragmentInURL: false,
+hashOneBasedIndex: false,
+pdfSeparateFragments: true,
+
+overview: true,
+
+theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+transition: Reveal.getQueryHash().transition || 'convex', // see README of reveal.js for options
+transitionSpeed: 'default',
+
+// Optional libraries used to extend reveal.js
+dependencies: [
+ { src: 'https://revealjs.com/plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+ { src: 'https://revealjs.com/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+ { src: 'https://revealjs.com/plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } },
+ { src: 'https://revealjs.com/plugin/search/search.js', async: true, condition: function() { return !!document.body.classList; } },
+ { src: 'https://revealjs.com/plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } }]
+
+});
+</script>
+</body>
+</html>

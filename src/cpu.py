@@ -1,10 +1,11 @@
 from typing import Callable, Dict
 
 import attr
-import numpy as np
 from loguru import logger
 
-from .memory import Byte, Memory, Word
+from memory import Byte, Memory, Word
+from pathlib import Path
+import sys
 
 
 @attr.s
@@ -20,6 +21,7 @@ class CPU:
         default=Byte(0), validator=attr.validators.instance_of(Byte), init=False
     )
     opcode: Dict[int, Callable] = attr.ib(default=None, init=False, repr=False)
+    read_offset: int = attr.ib(default=0, init=False, repr=False)
 
     def __attrs_post_init__(self):
         self.opcode = {
@@ -60,8 +62,6 @@ class CPU:
     def PC(self, value):
         if (value < 0) or (value > 4096):
             raise IndexError
-        if value % 2 != 0:
-            raise ValueError
 
         self._PC = value
 
@@ -113,7 +113,7 @@ class CPU:
     def add(self, arg):
         self.AC += self.memory[arg]
         logger.debug(
-            f"Adding value in memory position {arg} == /{self.memory[arg]:03X} to AC"
+            f"Adding /{self.memory[arg]:03X} to AC"
         )
         logger.debug(f"AC is now {self.AC}")
 
@@ -142,7 +142,9 @@ class CPU:
         logger.debug(f"AC is now {self.AC}")
 
     def load_from_memory(self, arg):
-        logger.debug(f"Settings AC to the value found in memory position {arg} == /{arg:02X}")
+        logger.debug(
+            f"Settings AC to {self.memory[arg]}"
+        )
         self.AC = self.memory[arg]
 
     def move_to_memory(self, arg):
@@ -157,8 +159,8 @@ class CPU:
         logger.debug(f"Current PC is now {self.PC}")
 
     def return_from_subroutine(self, arg):
-        first_byte = format(self.memory[arg], 'x')
-        second_byte = format(self.memory[arg + 1], 'x')
+        first_byte = format(self.memory[arg], "x")
+        second_byte = format(self.memory[arg + 1], "x")
         if self.memory[arg] > 0xF:
             logger.critical(
                 f"""The element in memory position {arg} is larger than 0xF, so
@@ -176,42 +178,34 @@ class CPU:
         self.PC = arg
 
     def get_data(self, _=None):
-        logger.debug("Collecting user inputs")
-        while self.process_user_input():
-            continue
-
-    def process_user_input(self):
-        """Had to create this function for testing purposes. Tests were in an
-        infinite loop after mocking the user input to something invalid"""
-        user_input = input("Input the value to be set in the PC").strip()
-        try:
-            if user_input[0] == "/":  # numbers with a leading / are treated as hex
-                value = int(user_input[1:], 16)
-            else:
-                value = int(user_input)
-
-            self.PC = value
-
-        except (ValueError, OverflowError, IndexError):
-            logger.debug(f"Invalid input attempted: {user_input}")
-            print("Invalid input. Expected even integer in range [0, 255]")
-            return 1
-
-        return 0
+        input_path = Path(__file__).parent.resolve().joinpath("data/program.bin")
+        # data = self.memory.program_data[self.memory.read_offset]
+        with open(input_path, "rb") as f:
+            f.seek(self.memory.read_offset)
+            data = int.from_bytes(f.read(1), 'big')
+            self.AC = Byte(data)
+        self.memory.read_offset += 1
+        logger.debug(f"setting AC to {self.AC}")
+        logger.debug(f"read_offset: {self.memory.read_offset}")
 
     def put_data(self, _=None):
-        """Poorly named instruction. It "puts" the data in stdout, i.e. prints it """
-        print(self.AC)
+        logger.debug(f"writing {self.AC} to the output file")
+        output_path = Path(__file__).parent.resolve().joinpath("data/output.txt")
+        with open(output_path, "a") as f:
+            f.write(str(self.AC.unsigned))
 
-    def os_call(self):
+    def os_call(self, arg):
+        if arg == 0:
+            sys.exit(0)
         raise NotImplementedError
+
+
 
 
 if __name__ == "__main__":
     mem = Memory()
-    cpu = CPU(mem, False)
-    cpu.load_value(0x123)
-    cpu.fetch()
-    cpu.load_value(0x445)
-    cpu.fetch()
-    cpu.put_data(123)
+    cpu = CPU(mem, trace=False)
+    while True:
+        cpu.fetch()
+        foo, arg = cpu.decode()
+        foo(arg)

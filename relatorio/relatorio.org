@@ -5,7 +5,6 @@ Para a primeira etapa do projeto, o objetivo é desenvolver três peças essenci
 - Loader
 - CPU (Von Neumann Machine)
 - Assembler
-
 * Desenvolvimento
 ** CPU
 Baseado em princípios de test-driven-development (TDD), eu decidi primeiro criar

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import attr
 from ctypes import c_int8
+from ctypes import c_uint8
+from src import loader
 
 
 @attr.s(eq=False, order=False, repr=False)
@@ -9,18 +11,22 @@ class Byte:
     pointer: c_int8 = attr.ib(converter=c_int8)
     first_nibble: int = attr.ib(init=False)
     second_nibble: int = attr.ib(init=False)
+    unsigned: int = attr.ib(init=False, repr=False)
 
     @first_nibble.default
     def first_nibble_default(self) -> int:
         val = self.pointer.value
         if self.pointer.value < 0:
-            val = 0xFF + self.pointer.value
+            val = 0xFF + self.pointer.value + 1
 
         return val >> 4
 
     @second_nibble.default
     def second_nibble_default(self) -> int:
         return self.pointer.value & 0x0F
+    @unsigned.default
+    def unsigned_default(self) -> int:
+        return c_uint8(self.pointer.value).value
 
     @property
     def value(self):
@@ -127,12 +133,15 @@ class Word:
         return iter(attr.astuple(self, recurse=False))
 
     def __repr__(self):
-        return f"Word({self.first_byte.value:02X}{self.second_byte.value:02X})"
+        return f"Word({self.first_byte.first_nibble:X}{self.first_byte.second_nibble:X}{self.second_byte.first_nibble:X}{self.second_byte.second_nibble:X})"
 
 
 class Memory:
     def __init__(self):
         self.memory = [Byte(0)] * 4096
+        for idx, byte in enumerate(loader[3:]):
+            self.memory[idx] = Byte(byte)
+        self.read_offset = 0
 
     @classmethod
     def from_list(cls, data):

@@ -1,123 +1,174 @@
+from pathlib import Path
+from typing import Dict, List
+
 import attr
 import pyparsing as pp
-from typing import Dict
-from pyparsing import *
 from loguru import logger
+from pyparsing import *
 
 
 @attr.s
 class Assembler:
 
-    path_to_file: str = attr.ib()
-    save_location: str = attr.ib(default="./build/")
-    # mnemonics: Dict[str, int] = attr.ib(init=False)
-    # mnemonic_to_opcode: Dict[str, str] = attr.ib(init=False)
+    input_file: str = attr.ib(default="assembly.txt")
+    save_location: str = attr.ib(default="./data/")
+    file_start: int = attr.ib(init=False, default=0)
+    file_end: int = attr.ib(init=False, default=0)
+    file_len: int = attr.ib(init=False, default=0)
+    symbols_table: Dict = attr.ib(init=False, default={})
+    tokens: List = attr.ib(repr=False, init=False, default=[])
 
     def __attrs_post_init__(self):
-        self.keywords = set("JJ", "J", "JZ", "Z")
-        self.mnemonic_to_opcode = {
-            "JP": "0",
-            "J": "0",
-            "JZ": "1",
-            "Z": "1",
-            "JN": "2",
-            "N": "2",
-            "LV": "3",
-            "V": "3",
-            "+": "4",
-            "-": "5",
-            "*": "6",
-            "/": "7",
-            "LD": "8",
-            "L": "8",
-            "MM": "9",
-            "M": "9",
-            "SC": "A",
-            "S": "A",
-            "RS": "B",
-            "R": "B",
-            "HM": "C",
-            "H": "C",
-            "GD": "D",
-            "G": "D",
-            "PD": "E",
-            "P": "E",
-            "OS": "F",
-            "O": "F",
-        }
+        self.keywords = Assembler.make_keywords_parser()
 
+        self.hex_args = Literal("/").suppress() + Word(hexnums)
+        self.hex_args.setParseAction(lambda x: Assembler.check_big_int(int(x[0], 16)))
 
-def make_parser():
+        self.int_args = Word(nums)
+        self.int_args.setParseAction(lambda x: Assembler.check_big_int(int(x[0])))
+        self.comment = Group(Literal(";").suppress()[1, ...] + Word(printables)[1, ...])
+
+    @staticmethod
+    def check_big_int(number):
+        if number >= 4096:
+            logger.critical(f"{number} cannot be represented in 12 bits")
+            raise ValueError
+        return format(number, "03X")
+
+    @staticmethod
     def make_keyword(full_name, shorthand=None, opcode=0):
         parser = Keyword(full_name, caseless=True)
         if shorthand is not None:
             parser |= Keyword(shorthand, caseless=True)
         return parser.setParseAction(lambda token: f"{opcode:X}")
 
-    def check_big_hex(token):
-        token = format(int(token[0], 16), "03X")
-        if len(token) > 3:
-            logger.critical(f"{token} cannot be represented in 12 bits")
-            raise ValueError
-        return token
+    @staticmethod
+    def make_keywords_parser():
+        keywords = (
+            JP := Assembler.make_keyword("JP", "J", 0)
+            | (JZ := Assembler.make_keyword("JZ", "Z", 1))
+            | (JN := Assembler.make_keyword("JN", "N", 2))
+            | (LV := Assembler.make_keyword("LV", "V", 3))
+            | (add := Assembler.make_keyword("+", None, 4))
+            | (subtract := Assembler.make_keyword("-", None, 5))
+            | (multiply := Assembler.make_keyword("*", None, 6))
+            | (divide := Assembler.make_keyword("/", None, 7))
+            | (LD := Assembler.make_keyword("LD", "L", 8))
+            | (MM := Assembler.make_keyword("MM", "M", 9))
+            | (SC := Assembler.make_keyword("SC", "S", 10))
+            | (RS := Assembler.make_keyword("RS", "R", 11))
+            | (HM := Assembler.make_keyword("HM", "H", 12))
+            | (GD := Assembler.make_keyword("GD", "G", 13))
+            | (PD := Assembler.make_keyword("PD", "P", 14))
+            | (OS := Assembler.make_keyword("OS", "O", 15))
+        )
+        return keywords
 
-    def check_big_int(token):
-        token = int(token[0])
-        if token >= 4096:
-            logger.critical(f"{token} cannot be represented in 12 bits")
-            raise ValueError
-        return format(token, "03X")
+    def assign_start(self, token):
+        self.file_start = int(token[1], 16)
 
-    hex_args = Literal("/").suppress() + Word(hexnums)
-    hex_args.setParseAction(check_big_hex)
+    def assign_end(self, token):
+        self.file_end = self.file_start + self.file_len
+        return ["0", f"{self.file_start:03X}"]
 
-    int_args = Word(nums)
-    int_args.setParseAction(check_big_int)
-    comment = Group(Literal(";").suppress()[1, ...] + Word(printables)[1, ...])
+    def make_pseudo_parser(self):
+        args = self.hex_args | self.int_args
+        start = Keyword("@") + args
+        start.setParseAction(self.assign_start)
 
-    statement = (
-        JP := make_keyword("JP", "J", 0)
-        | (JZ := make_keyword("JZ", "Z", 1))
-        | (JN := make_keyword("JN", "N", 2))
-        | (LV := make_keyword("LV", "V", 3))
-        | (add := make_keyword("+", None, 4))
-        | (subtract := make_keyword("-", None, 5))
-        | (multiply := make_keyword("*", None, 6))
-        | (divide := make_keyword("/", None, 7))
-        | (LD := make_keyword("LD", "L", 8))
-        | (MM := make_keyword("MM", "M", 9))
-        | (SC := make_keyword("SC", "S", 10))
-        | (RS := make_keyword("RS", "R", 11))
-        | (HM := make_keyword("HM", "H", 12))
-        | (GD := make_keyword("GD", "G", 13))
-        | (PD := make_keyword("PD", "P", 14))
-        | (OS := make_keyword("OS", "O", 15))
-    ) + (hex_args | int_args)
-    parser = comment.suppress() | (statement + Optional(comment.suppress()))
-    return parser.setParseAction("".join)
+        constant = Word(alphas, alphanums + "_") + Keyword("K") + args
+        constant.setParseAction(self.add_constant)
+
+        end = Keyword("#") + Optional(Word(alphas, alphanums + "_"))
+        end.setParseAction(self.assign_end)
+
+        pseudo = start.suppress() | constant | end
+        return pseudo
+
+    def add_constant(self, token):
+        var_name = token[0]
+        if var_name in self.symbols_table:
+            raise ValueError(
+                f"Symbol {var_name} already previously declared, naming conflict occurred"
+            )
+        self.symbols_table[var_name] = self.file_start + self.file_len
+        self.file_len += 1
+
+    def add_to_symbols_table(self, token):
+        if token in self.symbols_table:
+            raise ValueError(
+                f"Symbol {var_name} already previously declared, naming conflict occurred"
+            )
+        self.symbols_table[token] = self.file_start + self.file_len
+
+    def add_to_file_len(self):
+        self.file_len += 2
+
+    def step_one(self):
+        directive = Word(alphas, alphanums + "_").setParseAction(
+            lambda x: self.add_to_symbols_table(x[0])
+        )
+        statement = self.keywords + (
+            self.hex_args | self.int_args | Word(alphanums + "_")
+        )
+        statement.setParseAction(self.add_to_file_len)
+
+        pseudo = self.make_pseudo_parser()
+        step_one_parser = self.comment.suppress() | (
+            directive ^ statement ^ pseudo
+        ) + Optional(self.comment.suppress())
+
+        path = Path(__file__).parent.joinpath(f"data/{self.input_file}")
+        with open(path, "r") as f:
+            while (line := f.readline()) :
+                line = line.strip()
+                if not line:
+                    continue
+                res = list(step_one_parser.parseString(line))
+                self.tokens.append(res)
+
+    def step_two(self):
+        print(self)
+        # print(self.tokens)
+        partial_result = []  # opcodes with symbols substituted by their addresses
+        for token in self.tokens:
+            if type(token) == list and len(token) == 2:
+                try:
+                    int(token[1], 16)
+                    token = "".join(token)
+                except ValueError:
+                    if token[1] not in self.symbols_table:
+                        raise ValueError("Symbol was never previosly declared")
+                    token[1] = format(self.symbols_table[token[1]], "03X")
+                    token = "".join(token)
+            if type(token) == list and len(token) == 3:
+                token = token[2][1:]
+            if type(token) != list:
+                partial_result.append(token)
+        partial_result = [
+            "0" + format(self.file_start, "03X"),
+            format(self.file_len, "X"),
+        ] + partial_result
+        # print(partial_result)
+
+        result = []
+        for word in partial_result:
+            if len(word) > 2:
+                msb = int(word[:2], 16)
+                lsb = int(word[2:], 16)
+                result.append(msb)
+                result.append(lsb)
+            else:
+                result.append(int(word, 16))
+        result = bytearray(result)
+
+        path = Path(__file__).resolve().parent.joinpath("data/program.bin")
+        print(result)
+        with open(path, "wb") as f:
+            f.write(result)
 
 
-"""
-parsing input: wanted output
-JMP 123 : 0123
-J 123 : 0123
-+ 23 : 4023
-+ /23: 4045"""
-test = """
-JMP /123\n
-JN 333\n
-JN /23F\n
-+ /33A\n
-"""
-
-jmp = pp.Keyword("JMP")
-
-a = make_parser()
-from pathlib import Path
-
-with open(Path().resolve().joinpath("data/assembly.txt"), "r") as f:
-    while (line := f.readline()) :
-        if not line.strip():
-            continue
-        print(repr(line.strip()))
-        print(a.parseString(line.strip()))
+if __name__ == "__main__":
+    ass = Assembler("assembly.txt")
+    ass.step_one()
+    ass.step_two()
