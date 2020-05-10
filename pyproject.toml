@@ -3,6 +3,10 @@ name = "2020-pcs3216-9345853"
 version = "0.1.0"
 description = "Projeto de SisProg"
 authors = ["Adarah <lucasyharada@gmail.com>"]
+packages = [
+{ include = "./src"},
+{ include = "./tests/"},
+]
 
 [tool.poetry.dependencies]
 python = "^3.8"
