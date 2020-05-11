@@ -1,4 +1,4 @@
-% Created 2020-05-11 seg 11:21
+% Created 2020-05-11 seg 15:23
 % Intended LaTeX compiler: pdflatex
 \documentclass[11pt]{article}
 \usepackage[utf8]{inputenc}
@@ -31,7 +31,7 @@
 
 
 \section{Objetivo}
-\label{sec:org38c6b50}
+\label{sec:orge1a9cca}
 Para a primeira etapa do projeto, o objetivo é desenvolver três peças essencials a qualquer computador:
 \begin{itemize}
 \item Loader
@@ -39,9 +39,9 @@ Para a primeira etapa do projeto, o objetivo é desenvolver três peças essenci
 \item Assembler
 \end{itemize}
 \section{Desenvolvimento}
-\label{sec:orgf453b75}
+\label{sec:org9c4f7ca}
 \subsection{CPU}
-\label{sec:org3479024}
+\label{sec:org3aef747}
 Baseado em princípios de test-driven-development (TDD), eu decidi primeiro criar
 os testes de cada função a ser executada pela CPU (fetch, decode, add, load,
 etc). Como o enunciado não especificava, fiz algumas considerações sobre o tamanho de cada um dos components:
@@ -52,7 +52,7 @@ etc). Como o enunciado não especificava, fiz algumas considerações sobre o ta
 \end{itemize}
 O motivo para a escolha da memória com 12 bits é devido ao tamanho do operando. A única operação de OS call implementada até o momento é a de argumento 0, que realiza a saída do programa.
 \subsection{Loader}
-\label{sec:orgcff39aa}
+\label{sec:org7a240fc}
 O loader foi escrito em assembly, e possui 59 bytes. GOAL\_ONE e GOAL\_TWO são as variáveis que guardam o MSB e LSB do endereço do programa a ser carregado. Ao final do procedimento de load, o loader automaticamente move o Program Counter para o endereço inicial do programa carregado.
 \begin{verbatim}
 @   0
@@ -99,7 +99,7 @@ GOAL_TWO     K 0
 #  START
 \end{verbatim}
 \subsection{Assembler}
-\label{sec:org93f0a56}
+\label{sec:org440c487}
 Assemblers são programas que convertem mnemônicos assembly (ASM) para código de
 máquina. Podem ser de um ou dois passos. Assemblers de dois passos primeiro
 precisam gerar uma tabela de símbolos para depois conseguir traduzir à código de
@@ -113,7 +113,7 @@ START/CARRY no exemplo do loader), é necessário que elas estejam em linhas
 separadas de comandos.
 
 \section{Uso}
-\label{sec:org9bdabd7}
+\label{sec:org811e0d5}
 Requisitos mínimos:
 \begin{itemize}
 \item python 3.8+
@@ -124,9 +124,9 @@ Opcional:
 \item git
 \end{itemize}
 \subsection{Instalação}
-\label{sec:orgd5670b3}
+\label{sec:org882e333}
 \subsubsection{{\bfseries\sffamily TODO} Double check the instalation procedure, maybe add a windows step-by-step as well? or pyinstaller}
-\label{sec:orgc5f02f0}
+\label{sec:org373e68c}
 
 \begin{enumerate}
 \item Dentro de um terminal emulator, usar o comando:
@@ -140,7 +140,7 @@ Opcional:
 \item Executar \texttt{pip install .}
 \end{enumerate}
 \subsection{Testes}
-\label{sec:org86e163f}
+\label{sec:org0cdd04b}
 Usando a biblioteca pytest e hypothesis, cada um das minhas funções recebem ao
 menos 200 inputs aleatórios, o que ajuda a garantir que o código funciona como
 esperado. Para iniciar uma sessão de testes, basta executar o comando \texttt{pytest}
@@ -149,7 +149,7 @@ na raiz do diretório onde o código foi baixado.
 Um programa exemplo que calcula os 12 primeiros dígitos da sequência fibonnaci
 foi adicionado como teste para verficar o funcionamento do assembler.
 \subsection{Uso normal}
-\label{sec:orgfc7d526}
+\label{sec:org3ebe6d4}
 O script \texttt{src/assembler.py} aceita um argumento opcional com a flag \texttt{-f}, que é
 o caminho até o arquivo que se deseja montar. Caso nenhum argumento seja
 fornecido, ele monta o arquivo \texttt{src/data/fibonacci.asm} por default. Para
@@ -162,5 +162,5 @@ binário gerado pelo montador, use o comando \texttt{hexdump -C src/data/program
 
 Com o programa já montado, agora rode o script \texttt{python3 src/cpu.py}, e a
 execução irá iniciar automaticamente. Os outputs do programa serão guardados no
-arquivo \texttt{src/data/output.txt}
+arquivo \texttt{./output.txt}
 \end{document}

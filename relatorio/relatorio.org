@@ -111,4 +111,4 @@ binário gerado pelo montador, use o comando =hexdump -C src/data/program.bin=
 
 Com o programa já montado, agora rode o script =python3 src/cpu.py=, e a
 execução irá iniciar automaticamente. Os outputs do programa serão guardados no
-arquivo =src/data/output.txt=
+arquivo =./output.txt=
