@@ -1,4 +1,5 @@
 #+TITLE: Trabalho final de Sistemas de Programação
+#+OPTIONS: ^:nil
 
 * Objetivo
 Para a primeira etapa do projeto, o objetivo é desenvolver três peças essencials a qualquer computador:
@@ -67,18 +68,24 @@ precisam gerar uma tabela de símbolos para depois conseguir traduzir à código
 máquina, enquanto que assembler de um passo fazem o processo de coletar
 referências ainda não resolvidas, símbolos, e a montagem tudo ao mesmo tempo.
 
-Nesse projeto, para a primeira entrega, o assembler não trata de casos em que existem mais de uma psudo instrução de start (@). Outra restrição é que, quando usar diretivas (como START/CARRY no exemplo do loader), é necessário que elas estejam em linhas separadas de comandos.
+Nesse projeto eu decidi criar um assembler de dois passos por simplicidade. Para
+a primeira entrega, o assembler não trata de casos em que existem mais de uma
+psudo instrução de start (@). Outra restrição é que, quando usar símbolos (como
+START/CARRY no exemplo do loader), é necessário que elas estejam em linhas
+separadas de comandos.
 
 * Uso
 Requisitos mínimos:
-- git
 - python 3.8+
+- Linux
+Opcional:
+- git
 ** Instalação
 *** TODO Double check the instalation procedure, maybe add a windows step-by-step as well? or pyinstaller
 
 1. Dentro de um terminal emulator, usar o comando:
   
-    =git clone https://github.com/Adarah/2020-PCS3216-9345853.git=
+    =git clone https://github.com/Adarah/2020-PCS3216-9345853.git --shallow=
     - Caso não tenha o git instalado, pode baixar o código fonte manualmente do site da disciplina:
      https://sites.google.com/view/2020-pcs3216-9345853
 2. Entrar na pasta que foi baixada: =cd 2020-PCS3216-9345853=
@@ -88,8 +95,20 @@ Usando a biblioteca pytest e hypothesis, cada um das minhas funções recebem ao
 menos 200 inputs aleatórios, o que ajuda a garantir que o código funciona como
 esperado. Para iniciar uma sessão de testes, basta executar o comando =pytest=
 na raiz do diretório onde o código foi baixado.
+
+Um programa exemplo que calcula os 12 primeiros dígitos da sequência fibonnaci
+foi adicionado como teste para verficar o funcionamento do assembler.
 ** Uso normal
-*** TODO fix this part
-Para uso convencional, basta executar o comando
-=python3 src/vm.py=
-A VM irá procurar o arquivo assembly.txt dentro da pasta ./src/data/ e fará a montagem e também a execução.
+O script =src/assembler.py= aceita um argumento opcional com a flag =-f=, que é
+o caminho até o arquivo que se deseja montar. Caso nenhum argumento seja
+fornecido, ele monta o arquivo =src/data/fibonacci.asm= por default. Para
+realizar a montagem, use o comando seguindo esse padrão:
+
+=python3 src/assembler.py -f my_custom_assembly.asm=
+
+O novo binário será salvo em =src/data/program.bin=. Em máquinas Linux, caso deseje verificar o conteúdo
+binário gerado pelo montador, use o comando =hexdump -C src/data/program.bin=
+
+Com o programa já montado, agora rode o script =python3 src/cpu.py=, e a
+execução irá iniciar automaticamente. Os outputs do programa serão guardados no
+arquivo =src/data/output.txt=

@@ -4,3 +4,4 @@ venv/
 write.py
 .hypothesis
 .auctex-auto
+dist/
