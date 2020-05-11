@@ -191,7 +191,7 @@ class CPU:
 
     def put_data(self, _=None):
         logger.debug(f"writing {self.AC} to the output file")
-        with importlib.resources.path(data, "output.txt") as path, open(path, "a") as f:
+        with open("output.txt", "a") as f:
             f.write(str(self.AC.unsigned))
             f.write("\n")
 
