@@ -1,4 +1,4 @@
-% Created 2020-05-10 dom 13:42
+% Created 2020-05-11 seg 11:21
 % Intended LaTeX compiler: pdflatex
 \documentclass[11pt]{article}
 \usepackage[utf8]{inputenc}
@@ -31,7 +31,7 @@
 
 
 \section{Objetivo}
-\label{sec:orgef5dbb7}
+\label{sec:org38c6b50}
 Para a primeira etapa do projeto, o objetivo é desenvolver três peças essencials a qualquer computador:
 \begin{itemize}
 \item Loader
@@ -39,9 +39,9 @@ Para a primeira etapa do projeto, o objetivo é desenvolver três peças essenci
 \item Assembler
 \end{itemize}
 \section{Desenvolvimento}
-\label{sec:orgaaa6f63}
+\label{sec:orgf453b75}
 \subsection{CPU}
-\label{sec:orge0d2848}
+\label{sec:org3479024}
 Baseado em princípios de test-driven-development (TDD), eu decidi primeiro criar
 os testes de cada função a ser executada pela CPU (fetch, decode, add, load,
 etc). Como o enunciado não especificava, fiz algumas considerações sobre o tamanho de cada um dos components:
@@ -52,8 +52,8 @@ etc). Como o enunciado não especificava, fiz algumas considerações sobre o ta
 \end{itemize}
 O motivo para a escolha da memória com 12 bits é devido ao tamanho do operando. A única operação de OS call implementada até o momento é a de argumento 0, que realiza a saída do programa.
 \subsection{Loader}
-\label{sec:org55e498e}
-O loader foi escrito em assembly, e possui 59 bytes. GOAL\textsubscript{ONE} e GOAL\textsubscript{TWO} são as variáveis que guardam o MSB e LSB do endereço do programa a ser carregado. Ao final do procedimento de load, o loader automaticamente move o Program Counter para o endereço inicial do programa carregado.
+\label{sec:orgcff39aa}
+O loader foi escrito em assembly, e possui 59 bytes. GOAL\_ONE e GOAL\_TWO são as variáveis que guardam o MSB e LSB do endereço do programa a ser carregado. Ao final do procedimento de load, o loader automaticamente move o Program Counter para o endereço inicial do programa carregado.
 \begin{verbatim}
 @   0
 START
@@ -99,31 +99,39 @@ GOAL_TWO     K 0
 #  START
 \end{verbatim}
 \subsection{Assembler}
-\label{sec:orge872498}
+\label{sec:org93f0a56}
 Assemblers são programas que convertem mnemônicos assembly (ASM) para código de
 máquina. Podem ser de um ou dois passos. Assemblers de dois passos primeiro
 precisam gerar uma tabela de símbolos para depois conseguir traduzir à código de
 máquina, enquanto que assembler de um passo fazem o processo de coletar
 referências ainda não resolvidas, símbolos, e a montagem tudo ao mesmo tempo.
 
-Nesse projeto, para a primeira entrega, o assembler não trata de casos em que existem mais de uma psudo instrução de start (@). Outra restrição é que, quando usar diretivas (como START/CARRY no exemplo do loader), é necessário que elas estejam em linhas separadas de comandos.
+Nesse projeto eu decidi criar um assembler de dois passos por simplicidade. Para
+a primeira entrega, o assembler não trata de casos em que existem mais de uma
+psudo instrução de start (@). Outra restrição é que, quando usar símbolos (como
+START/CARRY no exemplo do loader), é necessário que elas estejam em linhas
+separadas de comandos.
 
 \section{Uso}
-\label{sec:org482da1e}
+\label{sec:org9bdabd7}
 Requisitos mínimos:
 \begin{itemize}
-\item git
 \item python 3.8+
+\item Linux
+\end{itemize}
+Opcional:
+\begin{itemize}
+\item git
 \end{itemize}
 \subsection{Instalação}
-\label{sec:orgbcd2479}
+\label{sec:orgd5670b3}
 \subsubsection{{\bfseries\sffamily TODO} Double check the instalation procedure, maybe add a windows step-by-step as well? or pyinstaller}
-\label{sec:org10459c1}
+\label{sec:orgc5f02f0}
 
 \begin{enumerate}
 \item Dentro de um terminal emulator, usar o comando:
 
-\texttt{git clone https://github.com/Adarah/2020-PCS3216-9345853.git}
+\texttt{git clone https://github.com/Adarah/2020-PCS3216-9345853.git -{}-shallow}
 \begin{itemize}
 \item Caso não tenha o git instalado, pode baixar o código fonte manualmente do site da disciplina:
 \url{https://sites.google.com/view/2020-pcs3216-9345853}
@@ -132,16 +140,27 @@ Requisitos mínimos:
 \item Executar \texttt{pip install .}
 \end{enumerate}
 \subsection{Testes}
-\label{sec:org866a0ea}
+\label{sec:org86e163f}
 Usando a biblioteca pytest e hypothesis, cada um das minhas funções recebem ao
 menos 200 inputs aleatórios, o que ajuda a garantir que o código funciona como
 esperado. Para iniciar uma sessão de testes, basta executar o comando \texttt{pytest}
 na raiz do diretório onde o código foi baixado.
+
+Um programa exemplo que calcula os 12 primeiros dígitos da sequência fibonnaci
+foi adicionado como teste para verficar o funcionamento do assembler.
 \subsection{Uso normal}
-\label{sec:org4303a29}
-\subsubsection{{\bfseries\sffamily TODO} fix this part}
-\label{sec:org65b5d2c}
-Para uso convencional, basta executar o comando
-\texttt{python3 src/vm.py}
-A VM irá procurar o arquivo assembly.txt dentro da pasta ./src/data/ e fará a montagem e também a execução.
+\label{sec:orgfc7d526}
+O script \texttt{src/assembler.py} aceita um argumento opcional com a flag \texttt{-f}, que é
+o caminho até o arquivo que se deseja montar. Caso nenhum argumento seja
+fornecido, ele monta o arquivo \texttt{src/data/fibonacci.asm} por default. Para
+realizar a montagem, use o comando seguindo esse padrão:
+
+\texttt{python3 src/assembler.py -f my\_custom\_assembly.asm}
+
+O novo binário será salvo em \texttt{src/data/program.bin}. Em máquinas Linux, caso deseje verificar o conteúdo
+binário gerado pelo montador, use o comando \texttt{hexdump -C src/data/program.bin}
+
+Com o programa já montado, agora rode o script \texttt{python3 src/cpu.py}, e a
+execução irá iniciar automaticamente. Os outputs do programa serão guardados no
+arquivo \texttt{src/data/output.txt}
 \end{document}

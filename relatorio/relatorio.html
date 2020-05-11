@@ -26,7 +26,7 @@
 <div class="reveal">
 <div class="slides">
 <section id="sec-title-slide">
-<h1 class="title">Trabalho final de Sistemas de Programação</h1><h2 class="author">Lucas Yuji Harada</h2><p class="date">Created: 2020-05-04 seg 12:36</p>
+<h1 class="title">Trabalho final de Sistemas de Programação</h1><h2 class="author">Lucas Yuji Harada</h2><p class="date">Created: 2020-05-11 seg 11:22</p>
 </section>
 <section id="table-of-contents-section">
 <div id="table-of-contents">
@@ -49,11 +49,7 @@
 </ul>
 </li>
 <li><a href="#/slide-3-2">3.2. Testes</a></li>
-<li><a href="#/slide-3-3">3.3. Uso normal</a>
-<ul>
-<li><a href="#/slide-3-3-1">3.3.1. <span class="todo TODO">TODO</span> fix this part</a></li>
-</ul>
-</li>
+<li><a href="#/slide-3-3">3.3. Uso normal</a></li>
 </ul>
 </li>
 </ul>
@@ -90,35 +86,80 @@ etc). Como o enunciado não especificava, fiz algumas considerações sobre o ta
 </p>
 <ul>
 <li>memória: 12 bits (4096 endereços)</li>
-<li>contador de instruções (PC): 16 bits</li>
-<li>acumulador: 16 bits</li>
+<li>contador de instruções (PC): 12 bits</li>
+<li>acumulador: 8 bits</li>
 
 </ul>
 <p>
-O motivo para a escolha da memória com 12 bits é devido ao tamanho do operando.
-Como cada instrução tem comprimento de 16 bits, sendo os 4 primeiros usados para
-definir o opcode, foi natural escolher 12 para endereças a memória. A mesma
-lógica se aplica ao acumulador; como existem instruções que podem carregar
-valores de até 12 bits nele (LV/load value por exemplo), usei 16 bits. Tive que
-divergir um pouco da implementação usada nos slides da aula 9, mais
-especificamente na instrução MV/move to memory, pois ela originalmente apenas
-poderia guardar 8 bits. Para guardar os 16 bits, decidi então alterar ela para
-que o endereço indicado pelo operando guarde o byte mais significativo do
-acumulador, e o endereço seguinte guarde o menos significativo. Para manter
-compatibilidade com a função LM/load from memory, também a alterei para que ela
-puxe 16 bits.
+O motivo para a escolha da memória com 12 bits é devido ao tamanho do operando. A única operação de OS call implementada até o momento é a de argumento 0, que realiza a saída do programa.
 </p>
 </section>
 <section id="slide-2-2">
 <h3 id="2-2"><span class="section-number-3">2.2</span> Loader</h3>
 <p>
-Comparativamente aos outros componentes, o loader é bem simples por se tratar de um loader absoluto. Caso tivessémos que implementar um linker/relocador, certamente seria muito mais complicado. No momento, estou usando apenas uma função que lê valores binários e guarda dados do tipo Byte na memória virtual.
+O loader foi escrito em assembly, e possui 59 bytes. GOAL_ONE e GOAL_TWO são as variáveis que guardam o MSB e LSB do endereço do programa a ser carregado. Ao final do procedimento de load, o loader automaticamente move o Program Counter para o endereço inicial do programa carregado.
 </p>
+<pre  class="example">
+@   0
+START
+            GD  0
+            MM GOAL_ONE
+            +   NINETY
+            MM  FIRST_BYTE
+            GD  0
+            MM GOAL_TWO
+            MM  SECOND_BYTE
+            GD  0
+            MM  LENGTH
+REPEAT
+            GD  0
+            JP  FIRST_BYTE
+RETURN
+            LD  SECOND_BYTE
+            +   ONE
+            MM  SECOND_BYTE
+            JZ  CARRY
+CHECK_IF_DONE
+            LD  LENGTH
+            -   ONE
+            MM  LENGTH
+            JZ  FINISH
+            JP  REPEAT
+CARRY
+            LD  FIRST_BYTE
+            +   ONE
+            MM  FIRST_BYTE
+            +   ONE
+            JP  CHECK_IF_DONE
+
+FIRST_BYTE   K  00 ;test
+SECOND_BYTE  K  00
+            JP RETURN
+LENGTH       K  00
+ONE          K  01
+NINETY       K  /90
+FINISH
+GOAL_ONE     K 0
+GOAL_TWO     K 0
+#  START
+</pre>
 </section>
 <section id="slide-2-3">
 <h3 id="2-3"><span class="section-number-3">2.3</span> Assembler</h3>
 <p>
-Assemblers são programas que convertem mnemônicos assembly (ASM) para código de máquina. Podem ser de um ou dois passos. Assemblers de dois passos primeiro precisam gerar uma tabela de símbolos para depois conseguir traduzir à código de máquina, enquanto que assembler de um passo fazem o processo de coletar referências ainda não resolvidas, símbolos, e a montagem tudo ao mesmo tempo.
+Assemblers são programas que convertem mnemônicos assembly (ASM) para código de
+máquina. Podem ser de um ou dois passos. Assemblers de dois passos primeiro
+precisam gerar uma tabela de símbolos para depois conseguir traduzir à código de
+máquina, enquanto que assembler de um passo fazem o processo de coletar
+referências ainda não resolvidas, símbolos, e a montagem tudo ao mesmo tempo.
+</p>
+
+<p>
+Nesse projeto eu decidi criar um assembler de dois passos por simplicidade. Para
+a primeira entrega, o assembler não trata de casos em que existem mais de uma
+psudo instrução de start (@). Outra restrição é que, quando usar símbolos (como
+START/CARRY no exemplo do loader), é necessário que elas estejam em linhas
+separadas de comandos.
 </p>
 
 </section>
@@ -130,8 +171,15 @@ Assemblers são programas que convertem mnemônicos assembly (ASM) para código 
 Requisitos mínimos:
 </p>
 <ul>
-<li>git</li>
 <li>python 3.8+</li>
+<li>Linux</li>
+
+</ul>
+<p>
+Opcional:
+</p>
+<ul>
+<li>git</li>
 
 </ul>
 </section>
@@ -148,7 +196,7 @@ Dentro de um terminal emulator, usar o comando:
 </p>
 
 <p>
-<code>git clone https://github.com/Adarah/2020-PCS3216-9345853.git</code>
+<code>git clone https://github.com/Adarah/2020-PCS3216-9345853.git --shallow</code>
 </p>
 <ul>
 <li>Caso não tenha o git instalado, pode baixar o código fonte manualmente do site da disciplina:
@@ -165,19 +213,37 @@ Dentro de um terminal emulator, usar o comando:
 <p>
 Usando a biblioteca pytest e hypothesis, cada um das minhas funções recebem ao
 menos 200 inputs aleatórios, o que ajuda a garantir que o código funciona como
-esperado. Para iniciar uma sessão de testes, basta executar o comando <code>pytest</code> na raiz do diretório onde o código foi baixado.
+esperado. Para iniciar uma sessão de testes, basta executar o comando <code>pytest</code>
+na raiz do diretório onde o código foi baixado.
+</p>
+
+<p>
+Um programa exemplo que calcula os 12 primeiros dígitos da sequência fibonnaci
+foi adicionado como teste para verficar o funcionamento do assembler.
 </p>
 </section>
 <section id="slide-3-3">
 <h3 id="3-3"><span class="section-number-3">3.3</span> Uso normal</h3>
-<div class="outline-text-3" id="text-3-3">
-</div>
-</section>
-<section id="slide-3-3-1">
-<h4 id="3-3-1"><span class="section-number-4">3.3.1</span> <span class="todo TODO">TODO</span> fix this part</h4>
 <p>
-Para uso convencional, basta executar o comando
-<code>python3 src/vm.py</code>
+O script <code>src/assembler.py</code> aceita um argumento opcional com a flag <code>-f</code>, que é
+o caminho até o arquivo que se deseja montar. Caso nenhum argumento seja
+fornecido, ele monta o arquivo <code>src/data/fibonacci.asm</code> por default. Para
+realizar a montagem, use o comando seguindo esse padrão:
+</p>
+
+<p>
+<code>python3 src/assembler.py -f my_custom_assembly.asm</code>
+</p>
+
+<p>
+O novo binário será salvo em <code>src/data/program.bin</code>. Em máquinas Linux, caso deseje verificar o conteúdo
+binário gerado pelo montador, use o comando <code>hexdump -C src/data/program.bin</code>
+</p>
+
+<p>
+Com o programa já montado, agora rode o script <code>python3 src/cpu.py</code>, e a
+execução irá iniciar automaticamente. Os outputs do programa serão guardados no
+arquivo <code>src/data/output.txt</code>
 </p>
 </section>
 </section>

@@ -1,3 +1,5 @@
+import argparse
+import importlib.resources
 from pathlib import Path
 from typing import Dict, List
 
@@ -6,12 +8,13 @@ import pyparsing as pp
 from loguru import logger
 from pyparsing import *
 
+from src import data
+
 
 @attr.s
 class Assembler:
 
-    input_file: str = attr.ib(default="assembly.txt")
-    save_location: str = attr.ib(default="./data/")
+    input_file: Path = attr.ib()
     file_start: int = attr.ib(init=False, default=0)
     file_end: int = attr.ib(init=False, default=0)
     file_len: int = attr.ib(init=False, default=0)
@@ -118,18 +121,19 @@ class Assembler:
             directive ^ statement ^ pseudo
         ) + Optional(self.comment.suppress())
 
-        path = Path(__file__).parent.joinpath(f"data/{self.input_file}")
-        with open(path, "r") as f:
+        with open(self.input_file, "r") as f:
             while (line := f.readline()) :
                 line = line.strip()
                 if not line:
                     continue
                 res = list(step_one_parser.parseString(line))
                 if self.file_end >= 4096:
-                    raise IndexError(f"""The program will not fit in memory
+                    raise IndexError(
+                        f"""The program will not fit in memory
                     Initial address: {self.file_start}
                     Program length: {self.file_len}
-                    {self.file_start + self.file_len} >= 4096""")
+                    {self.file_start + self.file_len} >= 4096"""
+                    )
                 self.tokens.append(res)
 
     def step_two(self):
@@ -166,12 +170,26 @@ class Assembler:
                 result.append(int(word, 16))
         result = bytearray(result)
 
-        path = Path(__file__).resolve().parent.joinpath("data/program.bin")
-        with open(path, "wb") as f:
+        # path = Path(__file__).resolve().parent.joinpath("data/program.bin")
+        with importlib.resources.path(data, "output.txt") as path, open(
+            path, "wb"
+        ) as f:
             f.write(result)
 
 
 if __name__ == "__main__":
-    ass = Assembler("assembly.txt")
+    parser = argparse.ArgumentParser()
+    with importlib.resources.path(data, "fibonacci.asm") as path:
+        parser.add_argument(
+            "-f",
+            "--file",
+            type=str,
+            help="path to the file to be assembled",
+            required=False,
+            default=path,
+        )
+    args = parser.parse_args()
+
+    ass = Assembler(args.file)
     ass.step_one()
     ass.step_two()

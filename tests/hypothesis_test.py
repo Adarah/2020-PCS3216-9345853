@@ -1,8 +1,6 @@
-import random
-
 import pytest
 from hypothesis import assume, given, settings
-from hypothesis.strategies import binary, builds, integers, one_of, text
+from hypothesis.strategies import builds, integers, text
 from loguru import logger
 
 from src.cpu import CPU
@@ -19,13 +17,6 @@ even_positions = integers(min_value=0, max_value=2047).map(lambda x: 2 * x)
 bytes = bytes_strat(0, 255)
 arg = integers(min_value=0, max_value=4095)
 ac = bytes
-valid_hex_input = (
-    text("0123456789ABCDEFabcdef", min_size=1, max_size=3)
-    .map(lambda x: int(x, 16) * 2)
-    .filter(lambda x: x < 4096)
-    .map(lambda x: "/" + format(x, "X"))
-)
-valid_user_data = one_of(even_positions.map(str), valid_hex_input)
 
 
 @pytest.fixture(scope="module")
@@ -226,9 +217,5 @@ def test_halt_machine(cpu, arg, module_mocker, user_input):
     assert cpu.PC == arg
 
 
-@given(data=binary(min_size=1, max_size=4096))
-def test_get_data(cpu, data):
-    cpu.memory.program_data = data
-    cpu.memory.read_offset = random.randint(0, len(data) - 1)
-    cpu.get_data(0x213)
-    assert cpu.AC == Byte(data[cpu.memory.read_offset - 1])
+def test_get_data(cpu):
+    pass

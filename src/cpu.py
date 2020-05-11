@@ -3,9 +3,14 @@ from typing import Callable, Dict
 import attr
 from loguru import logger
 
-from memory import Byte, Memory, Word
-from pathlib import Path
 import sys
+import importlib.resources
+from src import data
+
+try:
+    from memory import Byte, Memory, Word
+except ImportError:
+    from .memory import Byte, Memory, Word
 
 
 @attr.s
@@ -112,9 +117,7 @@ class CPU:
 
     def add(self, arg):
         self.AC += self.memory[arg]
-        logger.debug(
-            f"Adding /{self.memory[arg]:03X} to AC"
-        )
+        logger.debug(f"Adding /{self.memory[arg]:03X} to AC")
         logger.debug(f"AC is now {self.AC}")
 
     def subtract(self, arg):
@@ -142,9 +145,7 @@ class CPU:
         logger.debug(f"AC is now {self.AC}")
 
     def load_from_memory(self, arg):
-        logger.debug(
-            f"Settings AC to {self.memory[arg]}"
-        )
+        logger.debug(f"Settings AC to {self.memory[arg]}")
         self.AC = self.memory[arg]
 
     def move_to_memory(self, arg):
@@ -178,20 +179,19 @@ class CPU:
         self.PC = arg
 
     def get_data(self, _=None):
-        input_path = Path(__file__).parent.resolve().joinpath("data/program.bin")
-        # data = self.memory.program_data[self.memory.read_offset]
-        with open(input_path, "rb") as f:
+        with importlib.resources.path(data, "program.bin") as path, open(
+            path, "rb"
+        ) as f:
             f.seek(self.memory.read_offset)
-            data = int.from_bytes(f.read(1), 'big')
-            self.AC = Byte(data)
+            file_data = int.from_bytes(f.read(1), "big")
+            self.AC = Byte(file_data)
         self.memory.read_offset += 1
         logger.debug(f"setting AC to {self.AC}")
         logger.debug(f"read_offset: {self.memory.read_offset}")
 
     def put_data(self, _=None):
         logger.debug(f"writing {self.AC} to the output file")
-        output_path = Path(__file__).parent.resolve().joinpath("data/output.txt")
-        with open(output_path, "a") as f:
+        with importlib.resources.path(data, "output.txt") as path, open(path, "a") as f:
             f.write(str(self.AC.unsigned))
             f.write("\n")
 
@@ -199,8 +199,6 @@ class CPU:
         if arg == 0:
             sys.exit(0)
         raise NotImplementedError
-
-
 
 
 if __name__ == "__main__":
