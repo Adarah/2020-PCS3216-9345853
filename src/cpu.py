@@ -71,6 +71,7 @@ class CPU:
         self._PC = value
 
     def fetch(self):
+        logger.debug(f"PC is now {self.PC}")
         if self.trace:
             print(f"PC: {self.PC}")
             print(f"AC: {self.AC}")
@@ -121,10 +122,9 @@ class CPU:
         logger.debug(f"AC is now {self.AC}")
 
     def subtract(self, arg):
+        logger.debug(f"AC: {self.AC}")
+        logger.debug(f"Subtracting {self.memory[arg]} from AC")
         self.AC -= self.memory[arg]
-        logger.debug(
-            f"Subtracting value in memory position {arg} == /{self.memory[arg]:03X} from AC"
-        )
         logger.debug(f"AC is now {self.AC}")
 
     def multiply(self, arg):

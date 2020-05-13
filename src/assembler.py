@@ -8,6 +8,7 @@ import pyparsing as pp
 from loguru import logger
 from pyparsing import *
 
+from memory import Byte
 from src import data
 
 
@@ -168,10 +169,12 @@ class Assembler:
                 result.append(lsb)
             else:
                 result.append(int(word, 16))
+        checksum = Byte(sum(result[:-2])).unsigned
+        result.insert(3, checksum)
         result = bytearray(result)
 
         # path = Path(__file__).resolve().parent.joinpath("data/program.bin")
-        with importlib.resources.path(data, "output.txt") as path, open(
+        with importlib.resources.path(data, "program.bin") as path, open(
             path, "wb"
         ) as f:
             f.write(result)

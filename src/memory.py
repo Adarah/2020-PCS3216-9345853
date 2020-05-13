@@ -139,7 +139,7 @@ class Word:
 class Memory:
     def __init__(self):
         self.memory = [Byte(0)] * 4096
-        for idx, byte in enumerate(loader[3:]):
+        for idx, byte in enumerate(loader[4:]):
             self.memory[idx] = Byte(byte)
         self.read_offset = 0
 
